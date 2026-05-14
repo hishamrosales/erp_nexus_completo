@@ -1,13 +1,3 @@
-/**
- * ERP NEXUS — app.js
- * Lógica central: estado global, modales, validaciones, flujo ERP
- */
-
-/* ============================================================
-   ESTADO GLOBAL DE LA APLICACIÓN
-   Simula persistencia sin backend (localStorage)
-============================================================ */
-
 const ERP = {
 
   // ── Datos de clientes ──
@@ -101,9 +91,7 @@ const ERP = {
   usuario: { nombre: 'Ana González', rol: 'Ejecutivo de Ventas', iniciales: 'AG' }
 };
 
-/* ============================================================
-   PERSISTENCIA LOCAL
-============================================================ */
+/* PERSISTENCIA LOCAL */
 
 function saveState() {
   try {
@@ -151,9 +139,7 @@ function genFolio(prefix, list, field) {
   return `${prefix}-${new Date().getFullYear()}-${String(next).padStart(3,'0')}`;
 }
 
-/* ============================================================
-   SISTEMA DE MODALES
-============================================================ */
+/* SISTEMA DE MODALES */
 
 function openModal(id) {
   const el = document.getElementById(id);
@@ -183,9 +169,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-/* ============================================================
-   SISTEMA DE TABS
-============================================================ */
+/* SISTEMA DE TABS */
 
 function initTabs() {
   $$('[data-tab-target]').forEach(btn => {
@@ -205,9 +189,7 @@ function initTabs() {
   });
 }
 
-/* ============================================================
-   BADGES DE ESTADO
-============================================================ */
+/* BADGES DE ESTADO */
 
 const ESTADO_BADGE = {
   'activo':               'badge-activo',
@@ -229,9 +211,7 @@ function badgeHTML(estado) {
   return `<span class="badge ${cls}">${estado}</span>`;
 }
 
-/* ============================================================
-   MÓDULO: CLIENTES
-============================================================ */
+/* MÓDULO: CLIENTES */
 
 /** Renderiza tabla de clientes */
 function renderTablaClientes() {
@@ -415,9 +395,7 @@ function guardarCliente() {
   if (formCont) formCont.style.display = 'none';
 }
 
-/* ============================================================
-   MÓDULO: PEDIDOS
-============================================================ */
+/* MÓDULO: PEDIDOS  */
 
 let productosLineas = []; // Líneas de producto en el formulario activo
 
@@ -728,9 +706,7 @@ function confirmarGuardarPedido() {
   mostrarToast('Pedido guardado — Estado: Validación cliente', 'success');
 }
 
-/* ============================================================
-   MÓDULO: VALIDACIÓN DE CRÉDITO
-============================================================ */
+/* MÓDULO: VALIDACIÓN DE CRÉDITO  */
 
 function renderCreditoCliente() {
   // Carga datos de crédito del cliente seleccionado en el pedido activo
@@ -818,9 +794,7 @@ function confirmarValidacionCredito() {
   mostrarToast('Crédito validado — Estado: Validación crédito', 'success');
 }
 
-/* ============================================================
-   MÓDULO: CONSULTA DE STOCK
-============================================================ */
+/* MÓDULO: CONSULTA DE STOCK */
 
 function consultarStock() {
   if (!ERP.pedidoActivo) return;
@@ -894,9 +868,7 @@ function empaquetar() {
   openModal('modal-pedido-listo');
 }
 
-/* ============================================================
-   MÓDULO: FACTURA
-============================================================ */
+/* MÓDULO: FACTURA */
 
 function renderTablaFacturas() {
   const tbody = document.getElementById('facturas-tbody');
@@ -1070,9 +1042,7 @@ function verFactura(folio) {
   }
 }
 
-/* ============================================================
-   TOAST NOTIFICATIONS
-============================================================ */
+/* TOAST NOTIFICATIONS */
 
 function mostrarToast(msg, tipo = 'info') {
   let container = document.getElementById('toast-container');
@@ -1118,9 +1088,7 @@ function mostrarToast(msg, tipo = 'info') {
   }, 3500);
 }
 
-/* ============================================================
-   NAVEGACIÓN SIDEBAR
-============================================================ */
+/* NAVEGACIÓN SIDEBAR */
 
 function activarNavItem() {
   const path = window.location.pathname.split('/').pop() || 'index.html';
@@ -1135,9 +1103,7 @@ function toggleSidebar() {
   if (sidebar) sidebar.classList.toggle('open');
 }
 
-/* ============================================================
-   INICIALIZACIÓN
-============================================================ */
+/* INICIALIZACIÓN */
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();

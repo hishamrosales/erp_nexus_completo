@@ -12,9 +12,7 @@
 
   <main class="erp-content fade-in">
 
-    <!-- ══════════════════════════════════════════
-         LISTA DE PEDIDOS
-    ══════════════════════════════════════════ -->
+    <!-- lista de pedidos -->
     <div id="pedidos-container">
 
       <div class="page-header">
@@ -78,9 +76,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════
-         FORMULARIO PEDIDO
-    ══════════════════════════════════════════ -->
+    <!-- formuario de los pedidos -->
     <div id="pedido-form-container" style="display:none">
 
       <div class="page-header">
@@ -152,7 +148,7 @@
             </div>
           </div>
 
-          <!-- Info del cliente -->
+          <!-- info del cliente -->
           <div id="info-cliente-pedido" style="display:none; margin-top:16px">
             <div style="background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 18px; display:flex; gap:24px; flex-wrap:wrap">
               <div><span class="text-muted text-sm">RFC:</span> <span id="ped-cli-rfc" class="fw-semibold text-sm"></span></div>
@@ -164,7 +160,7 @@
         </div>
       </div>
 
-      <!-- Tabla de productos -->
+      <!-- tabla de productos -->
       <div class="erp-card" style="margin-bottom:20px">
         <div class="erp-card-header">
           <div class="erp-card-title">
@@ -208,7 +204,7 @@
         </div>
       </div>
 
-      <!-- Botones de acción -->
+      <!-- botones de acción -->
       <div class="erp-card">
         <div class="erp-card-body" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
           <button class="btn btn-secondary" onclick="mostrarListaPedidos()">
@@ -245,7 +241,7 @@
   </main>
 </div>
 
-<!-- ══════ MODAL: Confirmar guardar pedido ══════ -->
+<!-- pop up confirmar guardar pedido -->
 <div id="modal-confirmar-pedido" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
@@ -271,7 +267,7 @@
   </div>
 </div>
 
-<!-- ══════ MODAL: Pedido listo ══════ -->
+<!-- pop up pedido listo -->
 <div id="modal-pedido-listo" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
@@ -291,7 +287,7 @@
   </div>
 </div>
 
-<!-- ══════ MODAL: Eliminar pedido ══════ -->
+<!-- pop up eliminar pedido -->
 <div id="modal-eliminar-pedido" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">

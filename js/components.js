@@ -1,7 +1,3 @@
-/**
- * components.js — Inyecta navbar y sidebar en cada página
- */
-
 const SHARED_LAYOUT = `
 <!-- ══════════════ NAVBAR ══════════════ -->
 <nav class="erp-navbar">
