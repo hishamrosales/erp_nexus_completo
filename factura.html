@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ERP Nexus — Facturación</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="layout-wrapper">
+
+  <main class="erp-content fade-in">
+
+    <!-- ══════════════════════════════════════════
+         LISTA DE FACTURAS
+    ══════════════════════════════════════════ -->
+    <div id="facturas-container">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail"><a href="index.html">Dashboard</a> / <span>Facturación</span></div>
+          <h1 class="page-title">Facturación</h1>
+          <p class="page-subtitle">Alta y consulta de facturas — Solo pedidos con estado "Recibido"</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarFormNuevaFactura()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nueva Factura
+        </button>
+      </div>
+
+      <!-- Alerta regla de negocio -->
+      <div class="alert alert-info" style="margin-bottom:20px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div>
+          <strong>Regla de negocio:</strong> Solo se pueden facturar pedidos con estado
+          <span class="badge badge-recibido" style="margin:0 4px">Recibido</span>
+        </div>
+      </div>
+
+      <!-- Pedidos disponibles para facturar -->
+      <div class="erp-card" style="margin-bottom:20px">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:#ccfbf1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              </svg>
+            </div>
+            Pedidos listos para facturar
+          </div>
+        </div>
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acción</th></tr>
+            </thead>
+            <tbody id="pedidos-recibidos-tbody">
+              <!-- Dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Facturas emitidas -->
+      <div class="erp-card">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:#ede9fe">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            Facturas emitidas
+          </div>
+        </div>
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Folio Factura</th><th>Folio Pedido</th><th>Cliente</th>
+                <th>Fecha</th><th>Estado</th><th>Total</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="facturas-tbody">
+              <!-- Dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         FORMULARIO ALTA DE FACTURA
+    ══════════════════════════════════════════ -->
+    <div id="factura-form-container" style="display:none">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail">
+            <a href="index.html">Dashboard</a> /
+            <a href="#" onclick="mostrarListaFacturas()">Facturación</a> /
+            <span>Alta de Factura</span>
+          </div>
+          <h1 class="page-title">Alta de Factura</h1>
+          <p class="page-subtitle">Los datos se cargan automáticamente del pedido seleccionado</p>
+        </div>
+        <button class="btn btn-secondary" onclick="mostrarListaFacturas()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Volver
+        </button>
+      </div>
+
+      <!-- Selector de pedido -->
+      <div class="erp-card" style="margin-bottom:20px" id="card-seleccion-pedido">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:var(--primary-light)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-mid)" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              </svg>
+            </div>
+            Seleccionar Pedido
+          </div>
+        </div>
+        <div class="erp-card-body">
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Folio del Pedido <span class="required">*</span></label>
+              <select id="fac-pedido" class="form-select" onchange="autocargarFactura()">
+                <option value="">-- Seleccionar pedido (estado: Recibido) --</option>
+              </select>
+              <div class="invalid-feedback">Selecciona un pedido válido</div>
+            </div>
+            <div class="form-group" style="align-self:flex-end">
+              <div class="alert alert-warning" style="margin:0; padding:10px 14px; font-size:.8rem">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Solo pedidos con estado <strong>"Recibido"</strong> pueden facturarse
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de la factura (se llenan automáticamente) -->
+      <div class="erp-card" style="margin-bottom:20px" id="card-datos-factura" style="display:none">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:#ede9fe">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            Datos de la Factura
+          </div>
+          <div style="display:flex; align-items:center; gap:10px">
+            <span class="text-muted text-sm">Estado:</span>
+            <span id="fac-estado-badge"></span>
+          </div>
+        </div>
+        <div class="erp-card-body">
+          <div class="form-section">
+            <div class="form-section-title">Identificación</div>
+            <div class="form-grid form-grid-4">
+              <div class="form-group">
+                <label>Folio Factura</label>
+                <input type="text" id="fac-folio" class="form-control" readonly>
+              </div>
+              <div class="form-group">
+                <label>Folio Pedido</label>
+                <input type="text" id="fac-folio-ref" class="form-control" readonly>
+              </div>
+              <div class="form-group col-span-2">
+                <label>Cliente</label>
+                <input type="text" id="fac-cliente" class="form-control" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Fechas y estado</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Fecha de Factura</label>
+                <input type="date" id="fac-fecha" class="form-control" readonly>
+              </div>
+              <div class="form-group">
+                <label>Estado de Factura</label>
+                <input type="text" id="fac-estado" class="form-control" readonly value="Creada">
+              </div>
+              <div class="form-group">
+                <label>Moneda</label>
+                <input type="text" id="fac-moneda" class="form-control" readonly value="MXN">
+              </div>
+            </div>
+          </div>
+
+          <!-- Info de cliente copiada del pedido -->
+          <div id="fac-info-cliente" style="display:none; margin-bottom:16px">
+            <div style="background:var(--neutral-50); border-radius:8px; padding:14px 18px; border:1px solid var(--neutral-200)">
+              <div style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--neutral-500); margin-bottom:10px">Datos del cliente copiados del pedido</div>
+              <div style="display:flex; gap:24px; flex-wrap:wrap">
+                <div><span class="text-muted text-sm">RFC:</span> <span id="fac-cli-rfc" class="fw-semibold text-sm"></span></div>
+                <div><span class="text-muted text-sm">Correo:</span> <span id="fac-cli-email" class="fw-semibold text-sm"></span></div>
+                <div><span class="text-muted text-sm">Dirección:</span> <span id="fac-cli-dir" class="fw-semibold text-sm"></span></div>
+                <div><span class="text-muted text-sm">Condición pago:</span> <span id="fac-cli-cond" class="fw-semibold text-sm"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de conceptos -->
+      <div class="erp-card" style="margin-bottom:20px" id="card-conceptos" style="display:none">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:#ccfbf1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+              </svg>
+            </div>
+            Conceptos de Factura
+          </div>
+          <span class="badge badge-info">Cargados automáticamente del pedido</span>
+        </div>
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Código</th><th>Descripción</th><th>Cantidad</th>
+                <th>Precio Unit.</th><th style="text-align:right">Importe</th>
+              </tr>
+            </thead>
+            <tbody id="conceptos-tbody">
+              <!-- Dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totales -->
+        <div class="erp-card-body" style="padding:20px 24px">
+          <div style="display:flex; justify-content:flex-end">
+            <table class="totals-table">
+              <tr>
+                <td>Subtotal:</td>
+                <td id="fac-subtotal">$0.00</td>
+              </tr>
+              <tr>
+                <td style="color:var(--neutral-500)">IVA (16%):</td>
+                <td id="fac-iva" style="color:var(--neutral-500)">$0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Factura:</td>
+                <td id="fac-total">$0.00</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="erp-card" id="card-botones-factura" style="display:none">
+        <div class="erp-card-footer" style="background:transparent; border:none; padding:0; justify-content:flex-start; gap:12px">
+          <button class="btn btn-secondary" onclick="mostrarListaFacturas()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Cancelar
+          </button>
+          <button class="btn btn-primary" onclick="guardarFactura()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+            </svg>
+            Emitir Factura
+          </button>
+          <button class="btn btn-secondary ms-auto" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Imprimir previsualización
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /factura-form-container -->
+
+  </main>
+</div>
+
+<!-- ══════ MODAL: Confirmar emisión de factura ══════ -->
+<div id="modal-confirmar-factura" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-success">📄</div>
+      <div>
+        <div class="modal-title">Confirmar emisión de factura</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>¿Confirmas la emisión de la factura con los datos mostrados?</p>
+      <br>
+      <div style="background:#f0fdf4; border-radius:8px; padding:12px; border:1px solid #bbf7d0; font-size:.82rem; color:#14532d">
+        Al confirmar:<br>
+        • El <strong>Estado de Factura</strong> cambiará a <strong>"Creada"</strong><br>
+        • El <strong>Estado del Pedido</strong> cambiará a <strong>"Facturado"</strong>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirmar-factura')">Revisar</button>
+      <button class="btn btn-success" onclick="confirmarGuardarFactura()">Emitir factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL: Factura creada exitosamente ══════ -->
+<div id="modal-factura-creada" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-success">✅</div>
+      <div>
+        <div class="modal-title">¡Factura emitida con éxito!</div>
+        <div class="modal-subtitle">El comprobante ha sido generado</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>La factura ha sido creada correctamente. El pedido queda marcado como <strong>Facturado</strong>.</p>
+      <br>
+      <div style="background:var(--neutral-50); border-radius:8px; padding:12px; border:1px solid var(--neutral-200); font-size:.85rem">
+        <div><strong>Folio Factura:</strong> <span id="modal-folio-factura-resultado">—</span></div>
+        <div style="margin-top:4px"><strong>Total:</strong> <span id="modal-total-factura-resultado">—</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-factura-creada'); mostrarListaFacturas()">Ir a lista de facturas</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-factura-creada')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/components.js"></script>
+<script>
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderPedidosRecibidos();
+    renderTablaFacturas();
+    cargarPedidosParaFactura();
+  });
+
+  /* ── Tabla de pedidos listos para facturar ── */
+  function renderPedidosRecibidos() {
+    const tbody = document.getElementById('pedidos-recibidos-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const recibidos = ERP.pedidos.filter(p => p.estado === 'Recibido');
+
+    if (recibidos.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding:28px; color:var(--neutral-400)">
+            No hay pedidos con estado "Recibido" disponibles para facturar.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    recibidos.forEach(p => {
+      const cli = ERP.clientes.find(c => c.id === p.cliente_id);
+      const total = p.productos.reduce((s, x) => s + x.total, 0);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
+        <td>${cli ? cli.nombre : p.cliente_id}</td>
+        <td>${fmtDate(p.fecha)}</td>
+        <td class="fw-semibold">${fmt(total)}</td>
+        <td>${badgeHTML(p.estado)}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="facturarDesdeTabla('${p.folio}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Facturar
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ── Facturar directo desde la tabla ── */
+  function facturarDesdeTabla(folio) {
+    mostrarFormNuevaFactura();
+    setTimeout(() => {
+      const sel = document.getElementById('fac-pedido');
+      if (sel) { sel.value = folio; autocargarFactura(); }
+    }, 50);
+  }
+
+  /* ── Mostrar formulario de nueva factura ── */
+  function mostrarFormNuevaFactura() {
+    document.getElementById('facturas-container').style.display = 'none';
+    document.getElementById('factura-form-container').style.display = '';
+    // Limpiar
+    document.getElementById('fac-estado-badge').innerHTML = '';
+    document.getElementById('conceptos-tbody').innerHTML = '';
+    document.getElementById('fac-subtotal').textContent = '$0.00';
+    document.getElementById('fac-iva').textContent = '$0.00';
+    document.getElementById('fac-total').textContent = '$0.00';
+    ocultarSeccionesFactura();
+    cargarPedidosParaFactura();
+  }
+
+  /* ── Volver a la lista ── */
+  function mostrarListaFacturas() {
+    document.getElementById('factura-form-container').style.display = 'none';
+    document.getElementById('facturas-container').style.display = '';
+    ERP.facturaActiva = null;
+    renderTablaFacturas();
+    renderPedidosRecibidos();
+  }
+
+  /* ── Oculta secciones hasta que se seleccione pedido ── */
+  function ocultarSeccionesFactura() {
+    document.getElementById('card-datos-factura').style.display = 'none';
+    document.getElementById('card-conceptos').style.display = 'none';
+    document.getElementById('card-botones-factura').style.display = 'none';
+    document.getElementById('fac-info-cliente').style.display = 'none';
+  }
+
+  /* ── Override autocargarFactura para UI local ── */
+  window.autocargarFactura = function() {
+    const sel = document.getElementById('fac-pedido');
+    if (!sel || !sel.value) { ocultarSeccionesFactura(); return; }
+
+    const pedido = ERP.pedidos.find(p => p.folio === sel.value);
+    if (!pedido) return;
+
+    const cliente = ERP.clientes.find(c => c.id === pedido.cliente_id);
+
+    // Mostrar secciones
+    document.getElementById('card-datos-factura').style.display = '';
+    document.getElementById('card-conceptos').style.display = '';
+    document.getElementById('card-botones-factura').style.display = '';
+
+    // Llenar cabecera
+    const nuevoFolio = genFolio('FAC', ERP.facturas, 'folio');
+    setVal('fac-folio',    nuevoFolio);
+    setVal('fac-folio-ref', pedido.folio);
+    setVal('fac-cliente',  cliente ? cliente.nombre : pedido.cliente_id);
+    setVal('fac-fecha',    today());
+    setVal('fac-estado',   'Creada');
+    setVal('fac-moneda',   cliente ? (cliente.moneda || 'MXN') : 'MXN');
+
+    const badge = document.getElementById('fac-estado-badge');
+    if (badge) badge.innerHTML = badgeHTML('Creada');
+
+    // Info cliente
+    if (cliente) {
+      document.getElementById('fac-cli-rfc').textContent  = cliente.rfc;
+      document.getElementById('fac-cli-email').textContent= cliente.email;
+      document.getElementById('fac-cli-dir').textContent  = `${cliente.direccion}, ${cliente.ciudad}`;
+      document.getElementById('fac-cli-cond').textContent = cliente.cond_pago || '—';
+      document.getElementById('fac-info-cliente').style.display = '';
+    }
+
+    // Conceptos
+    const tbody = document.getElementById('conceptos-tbody');
+    tbody.innerHTML = '';
+    let subtotal = 0;
+    pedido.productos.forEach(p => {
+      subtotal += p.total;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.codigo}</td>
+        <td>${p.descripcion}</td>
+        <td>${p.cantidad.toLocaleString()}</td>
+        <td>${fmt(p.precio)}</td>
+        <td class="fw-semibold" style="text-align:right">${fmt(p.total)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const iva   = subtotal * 0.16;
+    const total = subtotal + iva;
+
+    document.getElementById('fac-subtotal').textContent = fmt(subtotal);
+    document.getElementById('fac-iva').textContent      = fmt(iva);
+    document.getElementById('fac-total').textContent    = fmt(total);
+
+    ERP.facturaActiva = {
+      pedido, cliente, subtotal, iva, total,
+      folio:       nuevoFolio,
+      folio_pedido:pedido.folio,
+      cliente_id:  pedido.cliente_id
+    };
+  };
+
+  /* ── Guardar factura ── */
+  window.guardarFactura = function() {
+    if (!ERP.facturaActiva) {
+      mostrarToast('Selecciona un pedido con estado Recibido', 'warning');
+      return;
+    }
+    openModal('modal-confirmar-factura');
+  };
+
+  /* ── Confirmar emisión ── */
+  window.confirmarGuardarFactura = function() {
+    closeModal('modal-confirmar-factura');
+    if (!ERP.facturaActiva) return;
+
+    const fa = ERP.facturaActiva;
+    const factura = {
+      folio:        fa.folio,
+      folio_pedido: fa.folio_pedido,
+      cliente_id:   fa.cliente_id,
+      fecha:        today(),
+      estado:       'Creada',
+      conceptos:    fa.pedido.productos,
+      subtotal:     fa.subtotal,
+      iva:          fa.iva,
+      total:        fa.total
+    };
+
+    ERP.facturas.push(factura);
+
+    // Actualizar pedido a "Facturado"
+    const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
+    if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
+
+    saveState();
+
+    // Llenar modal resultado
+    const mFolio = document.getElementById('modal-folio-factura-resultado');
+    const mTotal = document.getElementById('modal-total-factura-resultado');
+    if (mFolio) mFolio.textContent = fa.folio;
+    if (mTotal) mTotal.textContent = fmt(fa.total);
+
+    mostrarToast('Factura emitida correctamente', 'success');
+    openModal('modal-factura-creada');
+  };
+
+  /* ── Render tabla de facturas (override local) ── */
+  window.renderTablaFacturas = function() {
+    const tbody = document.getElementById('facturas-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (ERP.facturas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding:28px; color:var(--neutral-400)">
+            No hay facturas emitidas aún.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    ERP.facturas.forEach(f => {
+      const cli = ERP.clientes.find(c => c.id === f.cliente_id);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="fw-semibold" style="color:var(--primary-mid)">${f.folio}</span></td>
+        <td>${f.folio_pedido}</td>
+        <td>${cli ? cli.nombre : f.cliente_id}</td>
+        <td>${fmtDate(f.fecha)}</td>
+        <td>${badgeHTML(f.estado)}</td>
+        <td class="fw-semibold">${fmt(f.total)}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="verFacturaDetalle('${f.folio}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Ver
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
+
+  /* ── Ver factura en modo lectura ── */
+  function verFacturaDetalle(folio) {
+    const f = ERP.facturas.find(x => x.folio === folio);
+    if (!f) return;
+    const cli = ERP.clientes.find(c => c.id === f.cliente_id);
+
+    mostrarFormNuevaFactura();
+
+    setTimeout(() => {
+      // Mostrar todo
+      document.getElementById('card-datos-factura').style.display = '';
+      document.getElementById('card-conceptos').style.display = '';
+      document.getElementById('card-botones-factura').style.display = '';
+
+      setVal('fac-folio',    f.folio);
+      setVal('fac-folio-ref',f.folio_pedido);
+      setVal('fac-cliente',  cli ? cli.nombre : f.cliente_id);
+      setVal('fac-fecha',    f.fecha);
+      setVal('fac-estado',   f.estado);
+
+      const badge = document.getElementById('fac-estado-badge');
+      if (badge) badge.innerHTML = badgeHTML(f.estado);
+
+      if (cli) {
+        document.getElementById('fac-cli-rfc').textContent  = cli.rfc;
+        document.getElementById('fac-cli-email').textContent= cli.email;
+        document.getElementById('fac-cli-dir').textContent  = `${cli.direccion}, ${cli.ciudad}`;
+        document.getElementById('fac-cli-cond').textContent = cli.cond_pago || '—';
+        document.getElementById('fac-info-cliente').style.display = '';
+      }
+
+      const tbody = document.getElementById('conceptos-tbody');
+      tbody.innerHTML = '';
+      (f.conceptos || []).forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.codigo}</td><td>${p.descripcion}</td>
+          <td>${p.cantidad.toLocaleString()}</td>
+          <td>${fmt(p.precio)}</td>
+          <td class="fw-semibold" style="text-align:right">${fmt(p.total)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('fac-subtotal').textContent = fmt(f.subtotal);
+      document.getElementById('fac-iva').textContent      = fmt(f.iva);
+      document.getElementById('fac-total').textContent    = fmt(f.total);
+
+      // Deshabilitar selector y botón emitir en modo ver
+      const sel = document.getElementById('fac-pedido');
+      if (sel) sel.disabled = true;
+      document.getElementById('card-seleccion-pedido').style.display = 'none';
+
+      ERP.facturaActiva = null; // modo solo lectura
+    }, 50);
+  }
+</script>
+</body>
+</html>

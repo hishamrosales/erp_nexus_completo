@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ERP Nexus — Clientes</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="layout-wrapper">
+  <!-- Navbar y Sidebar via components.js -->
+
+  <main class="erp-content fade-in">
+
+    <!-- ══════════════════════════════════════════
+         LISTA DE CLIENTES
+    ══════════════════════════════════════════ -->
+    <div id="clientes-container">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail">
+            <a href="index.html">Dashboard</a> / <span>Clientes</span>
+          </div>
+          <h1 class="page-title">Clientes</h1>
+          <p class="page-subtitle">Gestión del maestro de clientes</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+          <button class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Exportar
+          </button>
+          <button class="btn btn-primary" onclick="mostrarFormNuevo()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nuevo Cliente
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros rápidos -->
+      <div class="erp-card" style="margin-bottom:20px">
+        <div class="erp-card-body" style="padding:16px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <div style="flex:1; min-width:180px">
+            <div class="navbar-search" style="max-width:300px; background:var(--neutral-50)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" placeholder="Buscar cliente, RFC..." id="buscar-cliente" oninput="filtrarClientes()">
+            </div>
+          </div>
+          <select class="form-select" style="width:auto; min-width:140px" id="filtro-estado-cli" onchange="filtrarClientes()">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activo</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="bloqueado">Bloqueado</option>
+          </select>
+          <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+            <span class="text-muted text-sm" id="cli-count">3 clientes</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de clientes -->
+      <div class="erp-card">
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre / Razón Social</th>
+                <th>RFC</th>
+                <th>Ciudad</th>
+                <th>Correo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clientes-tbody">
+              <!-- Dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         FORMULARIO CLIENTE (oculto por defecto)
+    ══════════════════════════════════════════ -->
+    <div id="form-container" style="display:none">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail">
+            <a href="index.html">Dashboard</a> /
+            <a href="#" onclick="ocultarForm()">Clientes</a> /
+            <span id="form-cliente-titulo">Nuevo Cliente</span>
+          </div>
+          <h1 class="page-title" id="form-cliente-titulo-h1">Nuevo Cliente</h1>
+        </div>
+        <button class="btn btn-secondary" onclick="ocultarForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Volver a lista
+        </button>
+      </div>
+
+      <form id="form-cliente" novalidate>
+
+        <!-- Tabs -->
+        <div data-tab-group>
+          <div class="erp-tabs">
+            <button type="button" class="erp-tab active" data-tab-target="tab-general">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              Datos Generales
+            </button>
+            <button type="button" class="erp-tab" data-tab-target="tab-pago">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+              Datos de Pago
+            </button>
+            <button type="button" class="erp-tab" data-tab-target="tab-envio">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+              Datos de Envío
+            </button>
+          </div>
+
+          <!-- Tab 1: Datos Generales -->
+          <div id="tab-general" class="tab-content active">
+            <div class="erp-card">
+              <div class="erp-card-header">
+                <div class="erp-card-title">
+                  <div class="card-icon" style="background:var(--primary-light)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-mid)" stroke-width="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  Información General
+                </div>
+                <!-- Badge de estado del cliente (sólo lectura) -->
+                <div style="display:flex; align-items:center; gap:10px">
+                  <span class="text-muted text-sm">Estado del cliente:</span>
+                  <span id="cli-estado-badge"><span class="badge badge-pendiente">Pendiente</span></span>
+                </div>
+              </div>
+              <div class="erp-card-body">
+
+                <div class="form-section">
+                  <div class="form-section-title">Identificación</div>
+                  <div class="form-grid form-grid-4">
+                    <div class="form-group">
+                      <label>ID Cliente</label>
+                      <input type="text" id="cli-id" class="form-control" readonly>
+                      <input type="hidden" id="cli-estado" value="pendiente">
+                    </div>
+                    <div class="form-group col-span-2">
+                      <label>Nombre / Razón Social <span class="required">*</span></label>
+                      <input type="text" id="cli-nombre" class="form-control" required placeholder="Ej. Distribuidora Torres S.A. de C.V.">
+                      <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="form-group">
+                      <label>RFC <span class="required">*</span></label>
+                      <input type="text" id="cli-rfc" class="form-control" required placeholder="Ej. DTS890312AB1" maxlength="13" style="text-transform:uppercase">
+                      <div class="invalid-feedback">RFC inválido</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-section">
+                  <div class="form-section-title">Contacto</div>
+                  <div class="form-grid form-grid-3">
+                    <div class="form-group">
+                      <label>Correo electrónico <span class="required">*</span></label>
+                      <input type="email" id="cli-email" class="form-control" required placeholder="contacto@empresa.com">
+                      <div class="invalid-feedback">Correo inválido</div>
+                    </div>
+                    <div class="form-group">
+                      <label>Teléfono</label>
+                      <input type="tel" id="cli-tel" class="form-control" placeholder="55 1234 5678">
+                    </div>
+                    <div class="form-group">
+                      <label>País</label>
+                      <select id="cli-pais" class="form-select">
+                        <option value="México">México</option>
+                        <option value="Estados Unidos">Estados Unidos</option>
+                        <option value="Canadá">Canadá</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-section">
+                  <div class="form-section-title">Dirección fiscal</div>
+                  <div class="form-grid form-grid-4">
+                    <div class="form-group col-span-2">
+                      <label>Calle y número <span class="required">*</span></label>
+                      <input type="text" id="cli-direccion" class="form-control" required placeholder="Av. Insurgentes Sur 1234">
+                    </div>
+                    <div class="form-group">
+                      <label>Ciudad <span class="required">*</span></label>
+                      <input type="text" id="cli-ciudad" class="form-control" required placeholder="Ciudad de México">
+                    </div>
+                    <div class="form-group">
+                      <label>Estado</label>
+                      <input type="text" id="cli-estado-dir" class="form-control" placeholder="CDMX">
+                    </div>
+                    <div class="form-group">
+                      <label>Código Postal</label>
+                      <input type="text" id="cli-cp" class="form-control" placeholder="03810" maxlength="5">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campo estado del cliente readonly con nota informativa -->
+                <div class="alert alert-info">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  El <strong>Estado del cliente</strong> es asignado automáticamente por el sistema y no puede modificarse manualmente.
+                  Los estados posibles son: <strong>Activo</strong>, <strong>Pendiente</strong> y <strong>Bloqueado</strong>.
+                </div>
+
+              </div>
+              <div class="erp-card-footer">
+                <button type="button" class="btn btn-secondary" onclick="ocultarForm()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                  Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarCliente()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Datos de Pago -->
+          <div id="tab-pago" class="tab-content">
+            <div class="erp-card">
+              <div class="erp-card-header">
+                <div class="erp-card-title">
+                  <div class="card-icon" style="background:#dbeafe">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-mid)" stroke-width="2">
+                      <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                  </div>
+                  Información de Pago
+                </div>
+              </div>
+              <div class="erp-card-body">
+                <div class="form-section">
+                  <div class="form-section-title">Método de pago</div>
+                  <div class="form-grid form-grid-3">
+                    <div class="form-group">
+                      <label>Método de pago</label>
+                      <select id="cli-metodo" class="form-select">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="Transferencia bancaria">Transferencia bancaria</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Domiciliación">Domiciliación</option>
+                        <option value="Tarjeta de crédito">Tarjeta de crédito</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Condiciones de pago</label>
+                      <select id="cli-condpago" class="form-select">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="Contado">Contado</option>
+                        <option value="15 días neto">15 días neto</option>
+                        <option value="30 días neto">30 días neto</option>
+                        <option value="45 días neto">45 días neto</option>
+                        <option value="60 días neto">60 días neto</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Moneda</label>
+                      <select id="cli-moneda" class="form-select">
+                        <option value="MXN">MXN — Peso Mexicano</option>
+                        <option value="USD">USD — Dólar Americano</option>
+                        <option value="EUR">EUR — Euro</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Datos bancarios</div>
+                  <div class="form-grid form-grid-3">
+                    <div class="form-group">
+                      <label>Banco</label>
+                      <select id="cli-banco" class="form-select">
+                        <option value="">-- Seleccionar banco --</option>
+                        <option value="BBVA México">BBVA México</option>
+                        <option value="Santander">Santander</option>
+                        <option value="Banamex">Banamex</option>
+                        <option value="Banorte">Banorte</option>
+                        <option value="HSBC">HSBC</option>
+                        <option value="Inbursa">Inbursa</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Número de cuenta</label>
+                      <input type="text" id="cli-cuenta" class="form-control" placeholder="0411234567" maxlength="18">
+                    </div>
+                    <div class="form-group">
+                      <label>CLABE interbancaria</label>
+                      <input type="text" id="cli-clabe" class="form-control" placeholder="012180004112345678" maxlength="18">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="erp-card-footer">
+                <button type="button" class="btn btn-secondary" onclick="ocultarForm()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarCliente()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Datos de Envío -->
+          <div id="tab-envio" class="tab-content">
+            <div class="erp-card">
+              <div class="erp-card-header">
+                <div class="erp-card-title">
+                  <div class="card-icon" style="background:#ccfbf1">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2">
+                      <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                      <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                  </div>
+                  Información de Envío y Entrega
+                </div>
+              </div>
+              <div class="erp-card-body">
+                <div class="form-section">
+                  <div class="form-section-title">Dirección de entrega</div>
+                  <div class="form-grid form-grid-3">
+                    <div class="form-group col-span-3">
+                      <label>Dirección de envío</label>
+                      <input type="text" id="cli-dir-envio" class="form-control" placeholder="Av. Insurgentes Sur 1234, Piso 3">
+                    </div>
+                    <div class="form-group">
+                      <label>Contacto de entrega</label>
+                      <input type="text" id="cli-contacto-envio" class="form-control" placeholder="Nombre del responsable">
+                    </div>
+                    <div class="form-group">
+                      <label>Teléfono de entrega</label>
+                      <input type="tel" id="cli-tel-envio" class="form-control" placeholder="55 9876 5432">
+                    </div>
+                    <div class="form-group">
+                      <label>Horario de entrega</label>
+                      <input type="text" id="cli-horario" class="form-control" placeholder="09:00 – 18:00">
+                    </div>
+                    <div class="form-group col-span-3">
+                      <label>Observaciones especiales</label>
+                      <textarea id="cli-obs" class="form-control" rows="3" placeholder="Instrucciones de acceso, restricciones, etc."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="erp-card-footer">
+                <button type="button" class="btn btn-secondary" onclick="ocultarForm()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarCliente()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-group -->
+
+      </form>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL: Confirmar eliminación
+══════════════════════════════════════ -->
+<div id="modal-eliminar-cliente" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-danger">🗑️</div>
+      <div>
+        <div class="modal-title">Eliminar cliente</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      ¿Estás seguro de que deseas eliminar este cliente? Se perderán todos sus datos.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-eliminar-cliente')">Cancelar</button>
+      <button class="btn btn-danger" onclick="ejecutarEliminarCliente()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/components.js"></script>
+<script>
+  let clienteParaEliminar = null;
+
+  function mostrarFormNuevo() {
+    ERP.clienteActivo = null;
+    ERP.modoEdicion = false;
+    limpiarFormCliente();
+    document.getElementById('clientes-container').style.display = 'none';
+    document.getElementById('form-container').style.display = '';
+    document.getElementById('form-cliente-titulo').textContent = 'Nuevo Cliente';
+    document.getElementById('form-cliente-titulo-h1').textContent = 'Nuevo Cliente';
+    // Asignar ID nuevo
+    const idEl = document.getElementById('cli-id');
+    if (idEl) idEl.value = genFolio('CLI', ERP.clientes, 'id');
+  }
+
+  function ocultarForm() {
+    document.getElementById('form-container').style.display = 'none';
+    document.getElementById('clientes-container').style.display = '';
+    renderTablaClientes();
+  }
+
+  // Override: editarCliente abre el form local
+  const _editarClienteOrig = editarCliente;
+  window.editarCliente = function(id) {
+    const c = ERP.clientes.find(x => x.id === id);
+    if (!c) return;
+    ERP.clienteActivo = c;
+    ERP.modoEdicion = true;
+    llenarFormCliente(c);
+    document.getElementById('clientes-container').style.display = 'none';
+    document.getElementById('form-container').style.display = '';
+    document.getElementById('form-cliente-titulo').textContent = 'Editar: ' + c.nombre.split(' ')[0];
+    document.getElementById('form-cliente-titulo-h1').textContent = 'Editar Cliente';
+  };
+
+  function confirmarEliminarCliente(id) {
+    clienteParaEliminar = id;
+    openModal('modal-eliminar-cliente');
+  }
+
+  function ejecutarEliminarCliente() {
+    ERP.clientes = ERP.clientes.filter(c => c.id !== clienteParaEliminar);
+    saveState();
+    closeModal('modal-eliminar-cliente');
+    renderTablaClientes();
+    mostrarToast('Cliente eliminado', 'danger');
+  }
+
+  function filtrarClientes() {
+    const query  = document.getElementById('buscar-cliente')?.value.toLowerCase() || '';
+    const estado = document.getElementById('filtro-estado-cli')?.value || '';
+    const rows   = document.querySelectorAll('#clientes-tbody tr');
+    let count = 0;
+    rows.forEach(row => {
+      const txt = row.textContent.toLowerCase();
+      const visible = (!query || txt.includes(query)) &&
+                      (!estado || txt.includes(estado));
+      row.style.display = visible ? '' : 'none';
+      if (visible) count++;
+    });
+    const counter = document.getElementById('cli-count');
+    if (counter) counter.textContent = `${count} cliente${count !== 1 ? 's' : ''}`;
+  }
+
+  // Guardar también actualiza el formulario
+  const _guardarClienteOrig = guardarCliente;
+  window.guardarCliente = function() {
+    _guardarClienteOrig();
+    // Mostrar lista después de guardar
+    setTimeout(ocultarForm, 200);
+  };
+
+  // Verificar si hay un cliente para cargar
+  document.addEventListener('DOMContentLoaded', () => {
+    const id = sessionStorage.getItem('erp_cliente_editar');
+    if (id) {
+      sessionStorage.removeItem('erp_cliente_editar');
+      window.editarCliente(id);
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'new') mostrarFormNuevo();
+  });
+</script>
+</body>
+</html>

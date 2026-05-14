@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ERP Nexus — Pedidos</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="layout-wrapper">
+
+  <main class="erp-content fade-in">
+
+    <!-- ══════════════════════════════════════════
+         LISTA DE PEDIDOS
+    ══════════════════════════════════════════ -->
+    <div id="pedidos-container">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail"><a href="index.html">Dashboard</a> / <span>Pedidos</span></div>
+          <h1 class="page-title">Pedidos</h1>
+          <p class="page-subtitle">Alta, modificación y seguimiento de pedidos</p>
+        </div>
+        <div style="display:flex; gap:10px">
+          <button class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Exportar
+          </button>
+          <button class="btn btn-primary" onclick="mostrarFormNuevoPedido()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nuevo Pedido
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="erp-card" style="margin-bottom:20px">
+        <div class="erp-card-body" style="padding:16px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <div class="navbar-search" style="max-width:280px; background:var(--neutral-50)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" placeholder="Buscar folio, cliente..." id="buscar-pedido" oninput="filtrarPedidos()">
+          </div>
+          <select class="form-select" style="width:auto; min-width:180px" id="filtro-estado-ped" onchange="filtrarPedidos()">
+            <option value="">Todos los estados</option>
+            <option value="Validación cliente">Validación cliente</option>
+            <option value="Validación crédito">Validación crédito</option>
+            <option value="Confirmar pedido">Confirmar pedido</option>
+            <option value="Recibido">Recibido</option>
+            <option value="Empaquetado">Empaquetado</option>
+            <option value="Facturado">Facturado</option>
+          </select>
+          <span class="text-muted text-sm ms-auto" id="ped-count">2 pedidos</span>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="erp-card">
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Folio</th><th>Cliente</th><th>Fecha</th>
+                <th>Fecha envío</th><th>Estado</th><th>Total</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="pedidos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         FORMULARIO PEDIDO
+    ══════════════════════════════════════════ -->
+    <div id="pedido-form-container" style="display:none">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="breadcrumb-trail">
+            <a href="index.html">Dashboard</a> /
+            <a href="#" onclick="mostrarListaPedidos()">Pedidos</a> /
+            <span id="ped-form-titulo">Nuevo Pedido</span>
+          </div>
+          <h1 class="page-title">Alta de Pedido</h1>
+          <p class="page-subtitle">Módulo de ventas — SAP S/4HANA</p>
+        </div>
+        <button class="btn btn-secondary" onclick="mostrarListaPedidos()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Volver
+        </button>
+      </div>
+
+      <!-- Banner de permisos -->
+      <div class="permission-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>Modificación de datos permitida solo para <strong>Ejecutivo de Ventas</strong></span>
+        <span class="badge badge-activo" style="margin-left:auto">✓ Acceso autorizado</span>
+      </div>
+
+      <!-- Cabecera del pedido -->
+      <div class="erp-card" style="margin-bottom:20px">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:var(--primary-light)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-mid)" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              </svg>
+            </div>
+            Cabecera del Pedido
+          </div>
+          <div style="display:flex; align-items:center; gap:10px">
+            <span class="text-muted text-sm">Estado:</span>
+            <span id="ped-estado-badge"><span class="badge badge-neutral">Nuevo</span></span>
+          </div>
+        </div>
+        <div class="erp-card-body">
+          <div class="form-grid form-grid-4">
+            <div class="form-group">
+              <label>Folio Pedido</label>
+              <input type="text" id="ped-folio" class="form-control" readonly>
+            </div>
+            <div class="form-group col-span-2">
+              <label>Cliente <span class="required">*</span></label>
+              <select id="ped-cliente" class="form-select" required onchange="autocompletarCliente()">
+                <option value="">-- Seleccionar cliente --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado del Pedido</label>
+              <input type="text" id="ped-estado" class="form-control" readonly value="Nuevo">
+            </div>
+            <div class="form-group">
+              <label>Fecha del Pedido</label>
+              <input type="date" id="ped-fecha" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Fecha de Envío Estimada</label>
+              <input type="date" id="ped-fecha-envio" class="form-control">
+            </div>
+          </div>
+
+          <!-- Info del cliente -->
+          <div id="info-cliente-pedido" style="display:none; margin-top:16px">
+            <div style="background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 18px; display:flex; gap:24px; flex-wrap:wrap">
+              <div><span class="text-muted text-sm">RFC:</span> <span id="ped-cli-rfc" class="fw-semibold text-sm"></span></div>
+              <div><span class="text-muted text-sm">Correo:</span> <span id="ped-cli-email" class="fw-semibold text-sm"></span></div>
+              <div><span class="text-muted text-sm">Ciudad:</span> <span id="ped-cli-ciudad" class="fw-semibold text-sm"></span></div>
+              <div><span class="text-muted text-sm">Estado:</span> <span id="ped-cli-estado-badge"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de productos -->
+      <div class="erp-card" style="margin-bottom:20px">
+        <div class="erp-card-header">
+          <div class="erp-card-title">
+            <div class="card-icon" style="background:#ccfbf1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </div>
+            Productos / Líneas del Pedido
+          </div>
+          <button class="btn btn-teal btn-sm" onclick="agregarProducto()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Agregar línea
+          </button>
+        </div>
+        <div class="erp-table-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th style="text-align:right">Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="productos-tbody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" style="text-align:right; font-weight:700; color:var(--neutral-700)">Total del Pedido:</td>
+                <td style="text-align:right; font-family:'Outfit',sans-serif; font-size:1.05rem; color:var(--primary); font-weight:800" id="ped-total">$0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="erp-card">
+        <div class="erp-card-body" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+          <button class="btn btn-secondary" onclick="mostrarListaPedidos()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Cancelar
+          </button>
+          <button class="btn btn-primary" onclick="guardarPedido()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+            </svg>
+            Guardar Pedido
+          </button>
+          <div class="separator" style="width:1px; height:32px; margin:0 4px"></div>
+          <button class="btn btn-warning" id="btn-autorizar-credito" disabled onclick="irACredito()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+            </svg>
+            Autorizar Crédito
+          </button>
+          <button class="btn btn-teal ms-auto" id="btn-empaquetar" disabled onclick="empaquetar()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+            Empaquetar
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════ MODAL: Confirmar guardar pedido ══════ -->
+<div id="modal-confirmar-pedido" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-warning">⚠️</div>
+      <div>
+        <div class="modal-title">Confirmar información del pedido</div>
+        <div class="modal-subtitle">Revisa cuidadosamente antes de continuar</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>Favor de <strong>verificar cuidadosamente</strong> la información antes de guardar.</p>
+      <br>
+      <p>Si los datos son incorrectos, será necesario solicitar modificaciones al <strong>ejecutivo de ventas</strong>, lo que puede generar <strong>retrasos en el proceso</strong>.</p>
+      <br>
+      <div style="background:var(--neutral-50); border-radius:8px; padding:12px; border:1px solid var(--neutral-200); font-size:.82rem; color:var(--neutral-600)">
+        Al confirmar, el estado del pedido cambiará a <strong>Validación cliente</strong> y se activará el botón de Autorizar Crédito.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirmar-pedido')">Revisar de nuevo</button>
+      <button class="btn btn-primary" onclick="confirmarGuardarPedido()">Confirmar y Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL: Pedido listo ══════ -->
+<div id="modal-pedido-listo" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-success">📦</div>
+      <div>
+        <div class="modal-title">¡Pedido empaquetado!</div>
+        <div class="modal-subtitle">Estado actualizado a Recibido</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      El pedido ha sido marcado como <strong>Recibido</strong>. Ahora puede proceder a la <strong>facturación</strong>.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-pedido-listo')">Cerrar</button>
+      <a href="factura.html" class="btn btn-primary">Ir a Facturación</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL: Eliminar pedido ══════ -->
+<div id="modal-eliminar-pedido" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-danger">🗑️</div>
+      <div>
+        <div class="modal-title">Eliminar pedido</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>¿Estás seguro de que deseas eliminar el pedido <strong id="eliminar-ped-folio"></strong>?</p>
+      <br>
+      <div style="background:var(--neutral-50); border-radius:8px; padding:12px 16px; border:1px solid var(--neutral-200); font-size:.83rem; display:flex; flex-direction:column; gap:6px">
+        <div><span style="color:var(--neutral-500)">Cliente:</span> <strong id="eliminar-ped-cliente"></strong></div>
+        <div style="display:flex; align-items:center; gap:6px"><span style="color:var(--neutral-500)">Estado:</span> <span id="eliminar-ped-estado"></span></div>
+      </div>
+      <br>
+      <p style="color:var(--danger); font-size:.82rem">⚠ Los pedidos facturados no pueden eliminarse.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-eliminar-pedido')">Cancelar</button>
+      <button class="btn btn-danger" onclick="eliminarPedido()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/components.js"></script>
+<script>
+  function mostrarFormNuevoPedido() {
+    ERP.pedidoActivo = null;
+    ERP.modoEdicion = false;
+    document.getElementById('pedidos-container').style.display = 'none';
+    document.getElementById('pedido-form-container').style.display = '';
+    document.getElementById('ped-form-titulo').textContent = 'Nuevo Pedido';
+    nuevoPedido();
+    cargarClientesSel();
+  }
+
+  function mostrarListaPedidos() {
+    document.getElementById('pedido-form-container').style.display = 'none';
+    document.getElementById('pedidos-container').style.display = '';
+    renderTablaPedidos();
+  }
+
+  // Override editarPedido para abrir formulario local
+  window.editarPedido = function(folio) {
+    const p = ERP.pedidos.find(x => x.folio === folio);
+    if (!p) return;
+    ERP.pedidoActivo = p;
+    ERP.modoEdicion = true;
+    document.getElementById('pedidos-container').style.display = 'none';
+    document.getElementById('pedido-form-container').style.display = '';
+    document.getElementById('ped-form-titulo').textContent = folio;
+    cargarClientesSel();
+    // Esperar a que el DOM esté listo
+    setTimeout(() => llenarFormPedido(p), 50);
+  };
+
+  window.verPedido = function(folio) { window.editarPedido(folio); };
+
+  function cargarClientesSel() {
+    const sel = document.getElementById('ped-cliente');
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
+    ERP.clientes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.id} — ${c.nombre}`;
+      sel.appendChild(opt);
+    });
+    if (val) sel.value = val;
+  }
+
+  function autocompletarCliente() {
+    const id = document.getElementById('ped-cliente')?.value;
+    const info = document.getElementById('info-cliente-pedido');
+    if (!id) { if (info) info.style.display = 'none'; return; }
+    const c = ERP.clientes.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('ped-cli-rfc').textContent   = c.rfc;
+    document.getElementById('ped-cli-email').textContent = c.email;
+    document.getElementById('ped-cli-ciudad').textContent= c.ciudad + ', ' + c.estado_dir;
+    document.getElementById('ped-cli-estado-badge').innerHTML = badgeHTML(c.estado);
+    if (info) info.style.display = '';
+  }
+
+  function irACredito() {
+    if (!ERP.pedidoActivo) return;
+    sessionStorage.setItem('erp_pedido_credito', ERP.pedidoActivo.folio);
+    window.location.href = 'credito.html';
+  }
+
+  function filtrarPedidos() {
+    const query  = document.getElementById('buscar-pedido')?.value.toLowerCase() || '';
+    const estado = document.getElementById('filtro-estado-ped')?.value || '';
+    const rows   = document.querySelectorAll('#pedidos-tbody tr');
+    let count = 0;
+    rows.forEach(row => {
+      const txt = row.textContent.toLowerCase();
+      const v = (!query || txt.includes(query)) && (!estado || txt.includes(estado));
+      row.style.display = v ? '' : 'none';
+      if (v) count++;
+    });
+    const c = document.getElementById('ped-count');
+    if (c) c.textContent = `${count} pedido${count !== 1 ? 's' : ''}`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const pedidoEditar = sessionStorage.getItem('erp_pedido_editar');
+    if (pedidoEditar) {
+      sessionStorage.removeItem('erp_pedido_editar');
+      setTimeout(() => window.editarPedido(pedidoEditar), 100);
+    }
+  });
+</script>
+</body>
+</html>
