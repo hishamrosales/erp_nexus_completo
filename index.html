@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ERP Nexus — Dashboard</title>
+  <title>SAP Signavio — Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
     <!-- ── Bienvenida ── -->
     <div class="welcome-banner">
       <div class="welcome-title">Bienvenida, Ana González</div>
-      <div class="welcome-subtitle">Panel de control ERP Nexus · Lunes, 15 de enero 2024 · <span class="live-dot"></span> En línea</div>
+      <div class="welcome-subtitle">Panel de control SAP & Furious · Lunes, 22 de mayo 2026 · <span class="live-dot"></span> En línea</div>
     </div>
 
     <!-- ── KPIs ── -->
@@ -136,53 +136,72 @@
         </div>
         <div class="erp-card-body">
           <div style="display:flex; flex-direction:column; gap:0">
-            <!-- Pasos del flujo -->
+            <!-- Paso 1 -->
             <div class="flow-step" style="display:flex; align-items:flex-start; gap:14px; padding-bottom:20px; position:relative">
               <div style="display:flex; flex-direction:column; align-items:center">
-                <div style="width:32px; height:32px; border-radius:50%; background:var(--primary-mid); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">1</div>
+                <div style="width:32px; height:32px; border-radius:50%; background:#40e66c; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">1</div>
                 <div style="width:2px; flex:1; background:var(--neutral-200); margin-top:4px; min-height:28px"></div>
               </div>
-              <div style="padding-top:5px">
-                <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Alta de Pedido</div>
+              <div style="padding-top:5px; flex:1">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Alta de Pedido</div>
+                  <span class="flow-count" id="flow-count-1" style="background:#dcfce7; color:#15803d; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; display:none">0</span>
+                </div>
                 <div style="font-size:.75rem; color:var(--neutral-500); margin-top:2px">Cliente confirma la solicitud</div>
               </div>
             </div>
+            <!-- Paso 2 -->
             <div class="flow-step" style="display:flex; align-items:flex-start; gap:14px; padding-bottom:20px; position:relative">
               <div style="display:flex; flex-direction:column; align-items:center">
-                <div style="width:32px; height:32px; border-radius:50%; background:#7c3aed; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">2</div>
+                <div style="width:32px; height:32px; border-radius:50%; background:#34ace3; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">2</div>
                 <div style="width:2px; flex:1; background:var(--neutral-200); margin-top:4px; min-height:28px"></div>
               </div>
-              <div style="padding-top:5px">
-                <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Validación de Crédito</div>
+              <div style="padding-top:5px; flex:1">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Validación de Crédito</div>
+                  <span class="flow-count" id="flow-count-2" style="background:#dbeafe; color:#1d4ed8; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; display:none">0</span>
+                </div>
                 <div style="font-size:.75rem; color:var(--neutral-500); margin-top:2px">Área financiera aprueba crédito</div>
               </div>
             </div>
+            <!-- Paso 3 -->
             <div class="flow-step" style="display:flex; align-items:flex-start; gap:14px; padding-bottom:20px; position:relative">
               <div style="display:flex; flex-direction:column; align-items:center">
-                <div style="width:32px; height:32px; border-radius:50%; background:var(--accent-teal); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">3</div>
+                <div style="width:32px; height:32px; border-radius:50%; background:#e8eb50; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">3</div>
                 <div style="width:2px; flex:1; background:var(--neutral-200); margin-top:4px; min-height:28px"></div>
               </div>
-              <div style="padding-top:5px">
-                <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Consulta de Stock</div>
+              <div style="padding-top:5px; flex:1">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Consulta de Stock</div>
+                  <span class="flow-count" id="flow-count-3" style="background:#fef3c7; color:#a16207; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; display:none">0</span>
+                </div>
                 <div style="font-size:.75rem; color:var(--neutral-500); margin-top:2px">Verifica disponibilidad de productos</div>
               </div>
             </div>
+            <!-- Paso 4 -->
             <div class="flow-step" style="display:flex; align-items:flex-start; gap:14px; padding-bottom:20px; position:relative">
               <div style="display:flex; flex-direction:column; align-items:center">
-                <div style="width:32px; height:32px; border-radius:50%; background:var(--warning); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">4</div>
+                <div style="width:32px; height:32px; border-radius:50%; background:#9c1e3b; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem; z-index:1">4</div>
                 <div style="width:2px; flex:1; background:var(--neutral-200); margin-top:4px; min-height:28px"></div>
               </div>
-              <div style="padding-top:5px">
-                <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Empaque y Envío</div>
+              <div style="padding-top:5px; flex:1">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Empaque y Envío</div>
+                  <span class="flow-count" id="flow-count-4" style="background:#ffedd5; color:#9c1e3b; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; display:none">0</span>
+                </div>
                 <div style="font-size:.75rem; color:var(--neutral-500); margin-top:2px">Logística prepara la entrega</div>
               </div>
             </div>
+            <!-- Paso 5 -->
             <div class="flow-step" style="display:flex; align-items:flex-start; gap:14px">
               <div style="display:flex; flex-direction:column; align-items:center">
                 <div style="width:32px; height:32px; border-radius:50%; background:var(--success); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.8rem">5</div>
               </div>
-              <div style="padding-top:5px">
-                <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Facturación</div>
+              <div style="padding-top:5px; flex:1">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <div style="font-weight:700; font-size:.85rem; color:var(--neutral-800)">Facturación</div>
+                  <span class="flow-count" id="flow-count-5" style="background:#c6f0d5; color:#12803a; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:20px; display:none">0</span>
+                </div>
                 <div style="font-size:.75rem; color:var(--neutral-500); margin-top:2px">Emisión de comprobante fiscal</div>
               </div>
             </div>
@@ -249,6 +268,24 @@
     document.getElementById('kpi-pedidos').textContent  = ERP.pedidos.length;
     document.getElementById('kpi-creditos').textContent = ERP.pedidos.filter(p=>p.estado==='Validación cliente').length;
     document.getElementById('kpi-facturas').textContent = ERP.facturas.length;
+
+    // Contadores del flujo del proceso
+    const flujoEstados = [
+      { id: 'flow-count-1', estados: ['Validación cliente'] },
+      { id: 'flow-count-2', estados: ['Validación crédito'] },
+      { id: 'flow-count-3', estados: ['Confirmar pedido'] },
+      { id: 'flow-count-4', estados: ['Recibido', 'Empaquetado'] },
+      { id: 'flow-count-5', estados: ['Facturado'] },
+    ];
+
+    flujoEstados.forEach(({ id, estados }) => {
+      const count = ERP.pedidos.filter(p => estados.includes(p.estado)).length;
+      const el = document.getElementById(id);
+      if (el && count > 0) {
+        el.textContent = count;
+        el.style.display = '';
+      }
+    });
   });
 </script>
 </body>

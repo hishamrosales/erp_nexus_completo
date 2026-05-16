@@ -187,7 +187,8 @@
                 <th>Código</th>
                 <th>Descripción</th>
                 <th>Cantidad</th>
-                <th>Precio Unit.</th>
+                <th style="text-align:right">Precio sin IVA</th>
+                <th>Precio con IVA</th>
                 <th style="text-align:right">Total</th>
                 <th></th>
               </tr>
@@ -221,7 +222,7 @@
             Guardar Pedido
           </button>
           <div class="separator" style="width:1px; height:32px; margin:0 4px"></div>
-          <button class="btn btn-warning" id="btn-autorizar-credito" disabled onclick="irACredito()">
+          <button class="btn " id="btn-autorizar-credito" disabled onclick="irACredito()" style="background:#22c55e; color:#fff">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
             </svg>
@@ -314,6 +315,69 @@
   </div>
 </div>
 
+<!-- MODAL: Ver pedido -->
+<div id="modal-ver-pedido" class="modal-overlay">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-info">📋</div>
+      <div>
+        <div class="modal-title" id="ver-ped-titulo">Pedido —</div>
+        <div class="modal-subtitle" id="ver-ped-cliente">Cliente</div>
+      </div>
+    </div>
+    <div class="modal-body">
+
+      <!-- Estado + fechas -->
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+        <div style="flex:1; min-width:140px; background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:12px">
+          <div style="font-size:.72rem; color:var(--neutral-500); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px">Estado</div>
+          <div id="ver-ped-estado"></div>
+        </div>
+        <div style="flex:1; min-width:140px; background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:12px">
+          <div style="font-size:.72rem; color:var(--neutral-500); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px">Fecha Pedido</div>
+          <div id="ver-ped-fecha" style="font-weight:600; font-size:.9rem; color:var(--neutral-800)"></div>
+        </div>
+        <div style="flex:1; min-width:140px; background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:12px">
+          <div style="font-size:.72rem; color:var(--neutral-500); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px">Fecha Envío</div>
+          <div id="ver-ped-fecha-envio" style="font-weight:600; font-size:.9rem; color:var(--neutral-800)"></div>
+        </div>
+      </div>
+
+      <!-- Productos -->
+      <div style="font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--neutral-500); margin-bottom:8px">Productos</div>
+      <div style="border:1px solid var(--neutral-200); border-radius:8px; overflow:hidden; margin-bottom:16px">
+        <table class="erp-table" style="margin:0">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th style="text-align:center">Cant.</th>
+              <th style="text-align:right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="ver-ped-productos"></tbody>
+        </table>
+      </div>
+
+      <!-- Total -->
+      <div style="display:flex; justify-content:flex-end">
+        <div style="background:var(--primary-light); border:1px solid var(--neutral-200); border-radius:8px; padding:12px 20px; text-align:right">
+          <div style="font-size:.78rem; color:var(--neutral-500); margin-bottom:4px">Total del pedido</div>
+          <div id="ver-ped-total" style="font-family:'Outfit',sans-serif; font-size:1.3rem; font-weight:800; color:var(--primary)"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ver-pedido')">Cerrar</button>
+      <button class="btn btn-primary" onclick="irAEditarDesdVer()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar pedido
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script src="js/components.js"></script>
 <script>
@@ -378,8 +442,7 @@
 
   function irACredito() {
     if (!ERP.pedidoActivo) return;
-    sessionStorage.setItem('erp_pedido_credito', ERP.pedidoActivo.folio);
-    window.location.href = 'credito.html';
+    window.location.href = 'credito.html?folio=' + ERP.pedidoActivo.folio;
   }
 
   function filtrarPedidos() {
@@ -395,6 +458,45 @@
     });
     const c = document.getElementById('ped-count');
     if (c) c.textContent = `${count} pedido${count !== 1 ? 's' : ''}`;
+  }
+
+
+    let folioViendose = null;
+
+  function abrirModalVerPedido(folio) {
+    const p = ERP.pedidos.find(x => x.folio === folio);
+    if (!p) return;
+    folioViendose = folio;
+
+    const cli = ERP.clientes.find(c => c.id === p.cliente_id);
+    const total = p.productos.reduce((s, x) => s + x.total, 0);
+
+    document.getElementById('ver-ped-titulo').textContent  = 'Pedido ' + p.folio;
+    document.getElementById('ver-ped-cliente').textContent = cli ? cli.nombre : p.cliente_id;
+    document.getElementById('ver-ped-estado').innerHTML    = badgeHTML(p.estado);
+    document.getElementById('ver-ped-fecha').textContent      = fmtDate(p.fecha);
+    document.getElementById('ver-ped-fecha-envio').textContent = fmtDate(p.fecha_envio);
+    document.getElementById('ver-ped-total').textContent   = fmt(total);
+
+    const tbody = document.getElementById('ver-ped-productos');
+    tbody.innerHTML = '';
+    p.productos.forEach(prod => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:var(--primary-mid); font-weight:600">${prod.codigo}</td>
+        <td style="font-size:.82rem">${prod.descripcion}</td>
+        <td style="text-align:center">${prod.cantidad}</td>
+        <td style="text-align:right; font-weight:600">${fmt(prod.total)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    openModal('modal-ver-pedido');
+  }
+
+  function irAEditarDesdVer() {
+    closeModal('modal-ver-pedido');
+    if (folioViendose) window.editarPedido(folioViendose);
   }
 
   document.addEventListener('DOMContentLoaded', () => {

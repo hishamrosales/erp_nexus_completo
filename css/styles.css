@@ -65,18 +65,18 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
 .erp-navbar .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: var(--sidebar-width);
+  /* Eliminamos el width fijo si solo quieres mover el logo, 
+     o usamos margin-left para empujarlo hacia la derecha */
+  margin-left: 40px; /* Ajusta este valor (ej. 40px, 60px, 100px) para separarlo de la izquierda a tu gusto */
   flex-shrink: 0;
 }
 
+/* 2. Corregimos el contenedor del logo para que acepte las dimensiones de tu imagen */
 .erp-navbar .brand-icon {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--primary-mid), var(--accent));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 18px;
+  /* Eliminamos el width y height fijos de 36px para que no corten la imagen de 120px */
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
 }
 
 .erp-navbar .brand-name {
@@ -547,7 +547,7 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
 .badge-validacion-cliente   { background: #ede9fe; color: #6d28d9; }
 .badge-validacion-credito   { background: #dbeafe; color: #1d4ed8; }
 .badge-confirmar-pedido     { background: #d1fae5; color: #065f46; }
-.badge-recibido             { background: #ccfbf1; color: #0f766e; }
+.badge-recibido             { background: #92ffa4; color: #288830; }
 .badge-empaquetado          { background: #fef3c7; color: #92400e; }
 .badge-enviado              { background: #dbeafe; color: #1e40af; }
 .badge-facturado            { background: #f3e8ff; color: #7c3aed; }
@@ -810,7 +810,7 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
   border: 1px solid transparent;
 }
 
-.alert-info    { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.alert-info    { background: #faddc6; color: #5f2b00; border-color: #f8b075; }
 .alert-warning { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 .alert-success { background: #dcfce7; color: #14532d; border-color: #bbf7d0; }
 .alert-danger  { background: #fee2e2; color: #991b1b; border-color: #fecaca; }

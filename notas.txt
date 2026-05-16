@@ -1,0 +1,44 @@
+FLUJO ESTADOS PEDIDOS
+se crea y está recibido
+al guardar cambios se pone validación cliente
+se valida el crédito y se pone validación crédito
+se consulta stock, se da clic en confirmar pedido y se pone confirmar pedido
+se da empaquetar y se pone recibido (aquí tiene que ser empaquetado)
+en facturacion se da emitir factura
+
+
+cambiar checkbox de autorizar crédito, para esto necesitamos 2 validaciones
+1. tiene que pedir un doc de situación fiscal y validar el código qr (no tiene que funcionar, se puede dejar que se apruebe por probabilidad, dejalo 50/50 para poder ver ambos casos), si no es válido que se inhabiliten todos los botones y que solo se pueda dar al botón de Cancelar Pedido. Cuando se esté validando debe haber un lugar donde salgan los sig 3 estados del doc: Activo, Suspendido, Cancelado. Solo debe funcionar el Activo y Cancelado, cuando el qr es válido q sea Activo, cuando no sea válido q sea Cancelado
+2. el cliente no debe deber más del 20% de su crédito
+Si ambas cosas son válidas que ya se habilite el botón de autorizar crédito.
+Actualmente también al momento de autorizar crédito no se suma al crédito utilizado de cada cliente, eso se debe arreglar para poder validar lo del audedo menor al 20% en la validación de crédito
+
+En la parte del stock, cuando se de al botón de Consultar Stock se debe validar que el stock menos la cantidad pedida no sea menor al punto de reorden (ROP = (Demanda diaria x Tiempo de entrega) + Stock de seguridad, AQUÍ TÚ DAME LOS PUNTOS DE REORDEN DE MIS 6 PRODUCTOS), en caso de no ser menor, no pasa nada, pero si es menor, en la parte del estado debe cambiar de "Suficiente" a "En punto de Reorden", si el Stock es insuficiente no debe dejar dar clic en Confirmar Pedido. 
+si el estado cambia a "En punto de Reorden" o "Insuficiente" debe salir un botón que diga "Solicitar Stock del producto", al darle clic debe salir un model donde por default ponga el/los productos que están en el estado de Reorden y que ponga por default la cantidad mínima que se necesita pedir para no estar en punto de reorden, que este campo se pueda modificar, pero que no se pueda poner una cantidad menor a la que se ponga por default, debe haber un botón q diga "Enviar Orden de Producción", este servirá para cerrar el model y que salga un pop up que diga "Correo y Notificaciones Enviadas" y que se mande una notificación en el botón de Notificaciones en la navbar, esta primera notificación tendrá el estado de "SOLICITADA", su background será de color morado. 
+Si la bandeja de notificaciones está vacía debe mostrarse como está, pero si tiene una notificación en bandeja debe mostrarse un circulo rojo arriba a la derecha del simbolo de notificacion.
+Al dar clic en el botón de notificaciones que salgan hacia abajo las notificaciones existentes, todas deben tener un color de background diferente dependiendo del estado. 
+En el caso de esta notificación se debe poder dar clic, que abra un model y diga "RESPONDIENDO CON EL ROL: PLANIFICADOR", acá se deberá poner la fecha de producción y poco más, deberá tener un botón que diga "Enviar". Al darle al botón enviar debe mandar nuevamente un pop up que diga "Correo y Notificaciones Enviadas". Nuevamente esta notificación deberá salir en el botón de Notificaciones (debe salir una nueva, no reemplazarla con la que ya existe), el background de este será de color azul y su estado será "PLANIFICADA"
+Al darle clic a esta notificación abrirá un model que diga "RESPONDIENDO CON EL ROL: OPERARIO", acá solo deberá haber un checkbox que diga "En fabricación" y un botón que diga "Enviar". Al darle al botón enviar, debe mandar nuevamente un pop up que diga "Correo y Notificaciones Enviadas". Nuevamente esta notificación deberá salir en el botón de Notificaciones (debe salir una nueva, no reemplazarla con la que ya existe), el background de este será de color naranja y su estado será "PRODUCCIÓN"
+Al darle clic a esta notificación abrirá un model que diga "RESPONDIENDO CON EL ROL: INSPECTOR", acá solo deberá haber dos checkboxs, uno que diga "Aprobado" y otro que diga "No aprobado" y un botón que diga "Enviar", solo se podrá seleccionar un checbox. Si se seleccionó el "Aprobado" deberá salir un mensaje que diga "Orden de Producción Confirmada", se eliminarán las notificaciones anteriores (de esta orden de producción) y esta ultima se guardará en Notificaciones, se le podrá dar clic, pero no se podrá modificar el checbox. y su background será de color verde. Pero si seleccionar el "No aprobado" deberá salir un mensaje que diga "Orden de Producción en Reproceso", en este caso no se eliminarán las notificaciones (de esta ordne de producción), pero se repetirá todo el proceso desde el rol planificador, es decir, volverá a mandar la notificación que debe responder el rol planificador y se irán respondiendo nuevamente, en caso de elegir "No aprobada" la notificación deberá quedarse con un background color rojo, igualmente se podrá dar clic pero no se podrá modificar su checkbox. Si en una orden de producción se va a reproceso 2 veces y a la 3ra ya se aprueba, las notificaciones que permanecerán serán las de color rojo y las de color verde
+TODO ESTO DE ARRIBA YA ESTÁ HECHO, PERO SURGIERON LOS SIG PROBLEMAS (YA ESTABAN DESDE ANTES PERO NO LOS HABÍA VISTO)
+
+en Pedidos no se debe poder editar un pedido ya facturado.
+al momento de empaquetar un pedido se debe restar las cantidades pedidas del stock actual.
+las notificaciones verdes y rojas no deben eliminarse nunca.
+al crear un nuevo cliente se debe poder modificar cuanto crédito tendrá como límite
+cuando se facture un pedido, se le debe restar la cantidad de la factura al crédito utilizado del cliente.
+al editar un cliente también se debe poder modificar el estado del cliente
+
+botón diagrama de estados en la navbar que salga un model con la imagen del diagrama YA ESTÁ EN LA NAVBAR, PERO FALTA AGREGAR EL MODEL CON LA IMAGEN
+botón de Acerca de en la navbar con datos de los integrantes del equipo LO MISMO Q ARRIB
+
+en el flujo de procesos
+Alta de pedido color verde claro (no pastel) #40e66c
+Validación de Crédito #34ace3
+Consulta de Stock  #e8eb50
+Empaque y Envío (naranja que ya tiene)
+Facturación rojo cereza  #9c1e3b  ESTO YA ESTÁ, PERO EL TONO DE AMARILLO NO ME CONVENCIÓ, DEJO A TU CRITERIO CAMBIARLO A UNO MENOS CHILLÓN
+
+Pedidos
+Validación cliente color azul #34ace3 fondo de ese color y letras blancas
+NO ME DIJERON LOS COLORES PARA LOS DEMÁS ESTADOS

@@ -235,8 +235,12 @@
           <table class="erp-table">
             <thead>
               <tr>
-                <th>Código</th><th>Descripción</th><th>Cantidad</th>
-                <th>Precio Unit.</th><th style="text-align:right">Importe</th>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Precio sin IVA</th>
+                <th>Precio con IVA</th>
+                <th style="text-align:right">Importe</th>
               </tr>
             </thead>
             <tbody id="conceptos-tbody">
@@ -477,22 +481,26 @@
     // Conceptos
     const tbody = document.getElementById('conceptos-tbody');
     tbody.innerHTML = '';
-    let subtotal = 0;
+    let totalConIva = 0;
     pedido.productos.forEach(p => {
-      subtotal += p.total;
+      totalConIva += p.total;
+      const precioSinIva  = p.precio / 1.16;
+      const importeSinIva = p.cantidad * precioSinIva;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${p.codigo}</td>
         <td>${p.descripcion}</td>
         <td>${p.cantidad.toLocaleString()}</td>
+        <td style="color:var(--neutral-500); font-size:.82rem">${fmt(precioSinIva)}</td>
         <td>${fmt(p.precio)}</td>
         <td class="fw-semibold" style="text-align:right">${fmt(p.total)}</td>
       `;
       tbody.appendChild(tr);
     });
 
-    const iva   = subtotal * 0.16;
-    const total = subtotal + iva;
+    const subtotal = totalConIva / 1.16;
+    const iva      = totalConIva - subtotal;
+    const total    = totalConIva;
 
     document.getElementById('fac-subtotal').textContent = fmt(subtotal);
     document.getElementById('fac-iva').textContent      = fmt(iva);
@@ -625,10 +633,12 @@
       const tbody = document.getElementById('conceptos-tbody');
       tbody.innerHTML = '';
       (f.conceptos || []).forEach(p => {
+        const precioSinIva = p.precio / 1.16;
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${p.codigo}</td><td>${p.descripcion}</td>
           <td>${p.cantidad.toLocaleString()}</td>
+          <td style="color:var(--neutral-500); font-size:.82rem">${fmt(precioSinIva)}</td>
           <td>${fmt(p.precio)}</td>
           <td class="fw-semibold" style="text-align:right">${fmt(p.total)}</td>
         `;

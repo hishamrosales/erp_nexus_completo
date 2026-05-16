@@ -39,13 +39,13 @@ const ERP = {
 
   // ── Catálogo de productos ──
   productos: [
-    { codigo: 'PROD-001', descripcion: 'Tornillo M6x20 Hexagonal Zinc', precio: 0.85, stock: 12500 },
-    { codigo: 'PROD-002', descripcion: 'Tuerca M6 DIN 934 Acero', precio: 0.45, stock: 9800 },
-    { codigo: 'PROD-003', descripcion: 'Rondana Plana M6 Galvanizada', precio: 0.30, stock: 15200 },
-    { codigo: 'PROD-004', descripcion: 'Perno 1/2" x 2" Grado 5', precio: 3.20, stock: 4500 },
-    { codigo: 'PROD-005', descripcion: 'Clavo 2.5" x 9 Caja 1kg', precio: 48.00, stock: 320 },
-    { codigo: 'PROD-006', descripcion: 'Remache Pop 3/16" x 1/2"', precio: 0.60, stock: 22000 }
-  ],
+  { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz',  precio: 850.00, stock: 125, rop: 25 },
+  { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz',         precio: 450.00, stock: 98,  rop: 18 },
+  { codigo: 'PROD-003', descripcion: '1 Caja de Rondanas Planas M6 Galvanizada, 1000pz',   precio: 300.00, stock: 152, rop: 16 },
+  { codigo: 'PROD-004', descripcion: '1 Caja de Pernos 1/2" x 2" Grado 5, 200pz',         precio: 640.00, stock: 45,  rop: 12 },
+  { codigo: 'PROD-005', descripcion: '1 Caja de Clavos 2.5" x 9, 15 Cajas de 1kg',        precio: 720.00, stock: 30,  rop: 10 },
+  { codigo: 'PROD-006', descripcion: '1 Caja de Remaches Pop 3/16" x 1/2", 800pz',        precio: 480.00, stock: 45,  rop: 9  },
+],
 
   // ── Pedidos ──
   pedidos: [
@@ -53,8 +53,8 @@ const ERP = {
       folio: 'PED-2024-001', cliente_id: 'CLI-001', fecha: '2024-01-15',
       fecha_envio: '2024-01-22', estado: 'Recibido',
       productos: [
-        { codigo: 'PROD-001', descripcion: 'Tornillo M6x20 Hexagonal Zinc', cantidad: 5000, precio: 0.85, total: 4250 },
-        { codigo: 'PROD-002', descripcion: 'Tuerca M6 DIN 934 Acero', cantidad: 5000, precio: 0.45, total: 2250 }
+        { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz', cantidad: 5, precio: 850.00, total: 4250.00 },
+        { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz', cantidad: 5, precio: 450.00, total: 2250.00 }
       ],
       credito_aprobado: true
     },
@@ -62,7 +62,7 @@ const ERP = {
       folio: 'PED-2024-002', cliente_id: 'CLI-001', fecha: '2024-02-01',
       fecha_envio: '2024-02-10', estado: 'Validación cliente',
       productos: [
-        { codigo: 'PROD-004', descripcion: 'Perno 1/2" x 2" Grado 5', cantidad: 200, precio: 3.20, total: 640 }
+        { codigo: 'PROD-004', descripcion: '1 Caja de Pernos 1/2" x 2" Grado 5, 200pz', cantidad: 200, precio: 3.20, total: 640.00 }
       ],
       credito_aprobado: false
     }
@@ -74,12 +74,14 @@ const ERP = {
       folio: 'FAC-2024-001', folio_pedido: 'PED-2024-001', cliente_id: 'CLI-001',
       fecha: '2024-01-23', estado: 'Creada',
       conceptos: [
-        { codigo: 'PROD-001', descripcion: 'Tornillo M6x20 Hexagonal Zinc', cantidad: 5000, precio: 0.85, total: 4250 },
-        { codigo: 'PROD-002', descripcion: 'Tuerca M6 DIN 934 Acero', cantidad: 5000, precio: 0.45, total: 2250 }
+        { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz', cantidad: 5, precio: 850.00, total: 4250.00 },
+        { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz', cantidad: 5, precio: 450.00, total: 2250.00 }
       ],
       subtotal: 6500, iva: 1040, total: 7540
     }
   ],
+
+  notificaciones: [],  // { id, tipo, estado, producto, cantidad, fechaProd, historia, cerrada }
 
   // ── Pedido activo en edición ──
   pedidoActivo: null,
@@ -134,9 +136,17 @@ function today() {
 }
 
 function genFolio(prefix, list, field) {
-  const nums = list.map(x => parseInt((x[field] || '0').replace(/\D/g,''))).filter(Boolean);
+  const year = new Date().getFullYear();
+  const nums = list
+    .map(x => {
+      const val = x[field] || '';
+      // Tomar solo la última parte después del último guión
+      const parts = val.split('-');
+      return parseInt(parts[parts.length - 1], 10);
+    })
+    .filter(n => !isNaN(n));
   const next = nums.length ? Math.max(...nums) + 1 : 1;
-  return `${prefix}-${new Date().getFullYear()}-${String(next).padStart(3,'0')}`;
+  return `${prefix}-${year}-${String(next).padStart(3, '0')}`;
 }
 
 /* SISTEMA DE MODALES */
@@ -418,8 +428,8 @@ function renderTablaPedidos() {
       <td class="fw-semibold">${fmt(total)}</td>
       <td>
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="verPedido('${p.folio}')">Ver</button>
-          <button class="btn btn-primary btn-sm" onclick="editarPedido('${p.folio}')">Editar</button>
+          <button class="btn btn-secondary btn-sm" onclick="abrirModalVerPedido('${p.folio}')">Ver</button>
+          <button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>
           <button class="btn btn-danger btn-sm" onclick="confirmarEliminarPedido('${p.folio}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
@@ -573,18 +583,21 @@ function autocompletarProducto(idx) {
 
 /** Calcula total de línea */
 function calcularTotal(idx) {
-  const qty   = parseFloat(document.getElementById(`prod-qty-${idx}`)?.value   || 0);
-  const price = parseFloat(document.getElementById(`prod-precio-${idx}`)?.value || 0);
-  const total = qty * price;
-  const totalEl = document.getElementById(`prod-total-${idx}`);
-  if (totalEl) totalEl.textContent = fmt(total);
+  const qty        = parseFloat(document.getElementById(`prod-qty-${idx}`)?.value   || 0);
+  const price      = parseFloat(document.getElementById(`prod-precio-${idx}`)?.value || 0);
+  const total      = qty * price;
+  const sinIvaEl   = document.getElementById(`prod-sin-iva-${idx}`);
+  const totalEl    = document.getElementById(`prod-total-${idx}`);
+
+  if (sinIvaEl) sinIvaEl.textContent = fmt(price / 1.16);
+  if (totalEl)  totalEl.textContent  = fmt(total);
 
   productosLineas[idx] = {
-    codigo:       document.getElementById(`prod-codigo-${idx}`)?.value || '',
-    descripcion:  document.getElementById(`prod-desc-${idx}`)?.value   || '',
-    cantidad:     qty,
-    precio:       price,
-    total:        total
+    codigo:      document.getElementById(`prod-codigo-${idx}`)?.value || '',
+    descripcion: document.getElementById(`prod-desc-${idx}`)?.value   || '',
+    cantidad:    qty,
+    precio:      price,
+    total:       total
   };
   actualizarTotalPedido();
 }
@@ -607,6 +620,9 @@ function renderProductosTable() {
       `<option value="${pr.codigo}" ${pr.codigo === p.codigo ? 'selected' : ''}>${pr.codigo}</option>`
     ).join('');
 
+    const precioConIva = p.precio || 0;
+    const precioSinIva = precioConIva / 1.16;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
@@ -615,9 +631,10 @@ function renderProductosTable() {
           ${optsHTML}
         </select>
       </td>
-      <td><input id="prod-desc-${idx}"   class="table-input" value="${p.descripcion}" placeholder="Descripción" style="min-width:200px"></td>
-      <td><input id="prod-qty-${idx}"    class="table-input" type="number" min="1" value="${p.cantidad}" style="width:80px" oninput="calcularTotal(${idx})"></td>
-      <td><input id="prod-precio-${idx}" class="table-input" type="number" step="0.01" value="${p.precio}" style="width:100px" oninput="calcularTotal(${idx})"></td>
+      <td><input id="prod-desc-${idx}" class="table-input" value="${p.descripcion}" placeholder="Descripción" style="min-width:200px"></td>
+      <td><input id="prod-qty-${idx}" class="table-input" type="number" min="1" value="${p.cantidad}" style="width:70px" oninput="calcularTotal(${idx})"></td>
+      <td style="text-align:right; color:var(--neutral-500); font-size:.82rem" id="prod-sin-iva-${idx}">${fmt(precioSinIva)}</td>
+      <td><input id="prod-precio-${idx}" class="table-input" type="number" step="0.01" value="${precioConIva}" style="width:100px" oninput="calcularTotal(${idx})"></td>
       <td id="prod-total-${idx}" class="fw-semibold" style="text-align:right">${fmt(p.total)}</td>
       <td>
         <button class="btn btn-danger btn-icon btn-sm" onclick="eliminarProducto(${idx})">
@@ -762,11 +779,6 @@ function setVal(id, val) {
 }
 
 function guardarValidacionCredito() {
-  const chk = document.getElementById('chk-credito');
-  if (!chk?.checked) {
-    mostrarToast('Debes marcar la casilla de validación de crédito', 'warning');
-    return;
-  }
   openModal('modal-confirmar-credito');
 }
 
@@ -982,7 +994,12 @@ function confirmarGuardarFactura() {
     total:       fa.total
   };
 
-  ERP.facturas.push(factura);
+  ERP.facturaActiva = {
+    pedido, cliente, subtotal, iva, total,
+    folio:       nuevoFolio,
+    folio_pedido:pedido.folio,
+    cliente_id:  pedido.cliente_id
+  };
 
   // Actualizar estado del pedido
   const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);

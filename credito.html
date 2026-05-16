@@ -200,31 +200,81 @@
                 <polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
             </div>
-            Autorización de Crédito
+            Validación para Autorización de Crédito
           </div>
         </div>
-        <div class="erp-card-body">
-          <label class="erp-checkbox" id="label-chk-credito">
-            <input type="checkbox" id="chk-credito" onchange="toggleCheckCredito(this)">
-            <div>
-              <div class="checkbox-label">Validación de crédito aprobada</div>
-              <div class="checkbox-hint">Confirmo que he revisado la situación crediticia del cliente y autorizo el crédito para este pedido.</div>
+        <div class="erp-card-body" style="display:flex; flex-direction:column; gap:20px">
+
+          <!-- VALIDACIÓN 1: Situación fiscal -->
+          <div style="border:1px solid var(--neutral-200); border-radius:10px; padding:18px">
+            <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:.9rem; color:var(--neutral-800); margin-bottom:14px; display:flex; align-items:center; gap:8px">
+              <span style="background:var(--primary-mid); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800">1</span>
+              Verificación de Situación Fiscal (SAT)
             </div>
-          </label>
+
+            <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">
+              <div class="form-group" style="flex:1; min-width:200px">
+                <label>Documento de Situación Fiscal (PDF/XML)</label>
+                <input type="file" id="archivo-fiscal" class="form-control" accept=".pdf,.xml" onchange="archivoFiscalSeleccionado(this)">
+              </div>
+              <button class="btn btn-secondary" id="btn-validar-qr" disabled onclick="validarQR()" style="white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                  <path d="M14 14h.01M14 17h.01M17 14h.01M17 17h3v3h-3z"/>
+                </svg>
+                Validar Código QR
+              </button>
+            </div>
+
+            <!-- Estado del documento -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <div id="sat-estado-activo" style="flex:1; min-width:100px; border-radius:8px; padding:10px 14px; text-align:center; border:2px solid var(--neutral-200); background:var(--neutral-50); transition:all .3s">
+                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--neutral-400)">Activo</div>
+                <div style="margin-top:4px; font-size:1.2rem">✓</div>
+              </div>
+              <div id="sat-estado-suspendido" style="flex:1; min-width:100px; border-radius:8px; padding:10px 14px; text-align:center; border:2px solid var(--neutral-200); background:var(--neutral-50); transition:all .3s">
+                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--neutral-400)">Suspendido</div>
+                <div style="margin-top:4px; font-size:1.2rem">⏸</div>
+              </div>
+              <div id="sat-estado-cancelado" style="flex:1; min-width:100px; border-radius:8px; padding:10px 14px; text-align:center; border:2px solid var(--neutral-200); background:var(--neutral-50); transition:all .3s">
+                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--neutral-400)">Cancelado</div>
+                <div style="margin-top:4px; font-size:1.2rem">✕</div>
+              </div>
+            </div>
+
+            <div id="fiscal-resultado" style="margin-top:12px; display:none"></div>
+          </div>
+
+          <!-- VALIDACIÓN 2: Deuda máxima 20% -->
+          <div style="border:1px solid var(--neutral-200); border-radius:10px; padding:18px">
+            <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:.9rem; color:var(--neutral-800); margin-bottom:14px; display:flex; align-items:center; gap:8px">
+              <span style="background:var(--primary-mid); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800">2</span>
+              Validación de Deuda (máx. 20% del límite de crédito)
+            </div>
+            <div id="deuda-resultado" style="font-size:.875rem; color:var(--neutral-600)">
+              Selecciona un pedido para calcular.
+            </div>
+          </div>
+
+          <!-- Resultado global -->
+          <div id="validacion-global-resultado" style="display:none"></div>
+
         </div>
         <div class="erp-card-footer">
-          <button class="btn btn-secondary" onclick="volverListaCredito()">
+          <button class="btn btn-danger" id="btn-cancelar-pedido-cred" style="display:none" onclick="cancelarPedidoDesdeCredito()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
-            Cancelar
+            Cancelar Pedido
           </button>
-          <button class="btn btn-success" onclick="guardarValidacionCredito()">
+          <button class="btn btn-secondary" onclick="volverListaCredito()">Cancelar</button>
+          <button class="btn btn-success" id="btn-guardar-credito" disabled onclick="guardarValidacionCredito()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
             </svg>
-            Guardar Validación
+            Autorizar Crédito
           </button>
         </div>
       </div>
@@ -361,6 +411,31 @@
   </div>
 </div>
 
+<!-- MODAL: Solicitar Stock -->
+<div id="modal-solicitar-stock" class="modal-overlay">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-warning">📦</div>
+      <div>
+        <div class="modal-title">Solicitar Stock del Producto</div>
+        <div class="modal-subtitle">Orden de producción para reabastecimiento</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="solicitar-stock-lista" style="display:flex; flex-direction:column; gap:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-solicitar-stock')">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarOrdenProduccion()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Enviar Orden de Producción
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script src="js/components.js"></script>
 <script>
@@ -370,8 +445,11 @@
     cargarListaPedidosCredito();
 
     // Si venimos desde pedidos.html con un pedido seleccionado
-    const folioGuardado = sessionStorage.getItem('erp_pedido_credito');
-    if (folioGuardado) {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('folio')) {
+      sessionStorage.removeItem('erp_pedido_credito');
+    } else {
+      const folioGuardado = params.get('folio');
       const p = ERP.pedidos.find(x => x.folio === folioGuardado);
       if (p) seleccionarPedidoCredito(folioGuardado);
     }
@@ -423,7 +501,6 @@
   function seleccionarPedidoCredito(folio) {
     ERP.pedidoActivo = ERP.pedidos.find(p => p.folio === folio);
     if (!ERP.pedidoActivo) return;
-    sessionStorage.setItem('erp_pedido_credito', folio);
 
     // Cambiar vista
     document.getElementById('seccion-lista-credito').style.display = 'none';
@@ -432,6 +509,19 @@
 
     // Llenar datos
     renderCreditoCliente();
+    // Reset validaciones
+    fiscalValida = false;
+    deudaValida  = false;
+    resetEstadosSAT && resetEstadosSAT();
+    evaluarDeuda();
+    evaluarValidaciones();
+    const btnQR = document.getElementById('btn-validar-qr');
+    if (btnQR) btnQR.disabled = true;
+    const archivoEl = document.getElementById('archivo-fiscal');
+    if (archivoEl) archivoEl.value = '';
+    ocultarResultadoFiscal && ocultarResultadoFiscal();
+    document.getElementById('validacion-global-resultado').style.display = 'none';
+    document.getElementById('btn-cancelar-pedido-cred').style.display = 'none';
     cargarProductosPedidoCredito();
 
     // Si el crédito ya fue aprobado, mostrar sección stock
@@ -501,6 +591,12 @@
       ERP.pedidos[idx].credito_aprobado = true;
       ERP.pedidoActivo = ERP.pedidos[idx];
     }
+    // Sumar el total del pedido al crédito utilizado del cliente
+    const totalPedido = ERP.pedidoActivo.productos.reduce((s, p) => s + p.total, 0);
+    const idxCli = ERP.clientes.findIndex(c => c.id === ERP.pedidoActivo.cliente_id);
+    if (idxCli >= 0) {
+      ERP.clientes[idxCli].credito_utilizado += totalPedido;
+    }
     saveState();
 
     // Actualizar badge
@@ -510,6 +606,181 @@
     mostrarSeccionStock();
     mostrarToast('Crédito autorizado — Estado: Validación crédito', 'success');
   };
+
+    let fiscalValida = false;
+    let deudaValida  = false;
+
+    function archivoFiscalSeleccionado(input) {
+      const btn = document.getElementById('btn-validar-qr');
+      if (btn) btn.disabled = !input.files.length;
+      // Reset estados
+      fiscalValida = false;
+      resetEstadosSAT();
+      ocultarResultadoFiscal();
+      evaluarValidaciones();
+    }
+
+    function resetEstadosSAT() {
+      ['sat-estado-activo','sat-estado-suspendido','sat-estado-cancelado'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.borderColor = 'var(--neutral-200)';
+          el.style.background  = 'var(--neutral-50)';
+          el.querySelector('div:first-child').style.color = 'var(--neutral-400)';
+        }
+      });
+    }
+
+    function ocultarResultadoFiscal() {
+      const el = document.getElementById('fiscal-resultado');
+      if (el) el.style.display = 'none';
+    }
+
+    function validarQR() {
+      const btn = document.getElementById('btn-validar-qr');
+      if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
+
+      resetEstadosSAT();
+
+      setTimeout(() => {
+        // 50/50
+        const aprobado = Math.random() >= 0.5;
+        const estadoId = aprobado ? 'sat-estado-activo' : 'sat-estado-cancelado';
+        const el = document.getElementById(estadoId);
+
+        if (aprobado) {
+          el.style.borderColor = 'var(--success)';
+          el.style.background  = '#dcfce7';
+          el.querySelector('div:first-child').style.color = 'var(--success)';
+        } else {
+          el.style.borderColor = 'var(--danger)';
+          el.style.background  = '#fee2e2';
+          el.querySelector('div:first-child').style.color = 'var(--danger)';
+        }
+
+        fiscalValida = aprobado;
+
+        const resEl = document.getElementById('fiscal-resultado');
+        if (resEl) {
+          resEl.style.display = '';
+          resEl.innerHTML = aprobado
+            ? `<div class="alert alert-success" style="margin:0">✓ <strong>Código QR válido.</strong> Situación fiscal: <strong>Activo</strong> ante el SAT.</div>`
+            : `<div class="alert alert-danger" style="margin:0">✕ <strong>Código QR inválido.</strong> Situación fiscal: <strong>Cancelado</strong> ante el SAT. No se puede autorizar el crédito.</div>`;
+        }
+
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h.01M17 14h.01M17 17h3v3h-3z"/></svg> Validar de nuevo`;
+        }
+
+        evaluarValidaciones();
+      }, 1800);
+    }
+
+    function evaluarDeuda() {
+      if (!ERP.pedidoActivo) return;
+      const cli = ERP.clientes.find(c => c.id === ERP.pedidoActivo.cliente_id);
+      if (!cli) return;
+
+      const pct = cli.limite_credito > 0 ? (cli.credito_utilizado / cli.limite_credito) * 100 : 0;
+      deudaValida = pct <= 20;
+
+      const el = document.getElementById('deuda-resultado');
+      if (el) {
+        if (deudaValida) {
+          el.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Deuda dentro del límite.</strong> Crédito utilizado: <strong>${pct.toFixed(1)}%</strong> del límite (máx. 20% permitido).</div>`;
+        } else {
+          el.innerHTML = `<div class="alert alert-danger" style="margin:0">✕ <strong>Deuda excede el límite.</strong> Crédito utilizado: <strong>${pct.toFixed(1)}%</strong> del límite. Se requiere que sea menor al 20% para autorizar.</div>`;
+        }
+      }
+    }
+
+    function evaluarValidaciones() {
+      const btnAutorizar = document.getElementById('btn-guardar-credito');
+      const btnCancelar  = document.getElementById('btn-cancelar-pedido-cred');
+      const resGlobal    = document.getElementById('validacion-global-resultado');
+
+      const ambas = fiscalValida && deudaValida;
+      const ninguna = !fiscalValida;
+
+      if (btnAutorizar) btnAutorizar.disabled = !ambas;
+
+      if (resGlobal) {
+        if (ambas) {
+          resGlobal.style.display = '';
+          resGlobal.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Todas las validaciones aprobadas.</strong> Puedes autorizar el crédito.</div>`;
+        } else if (!fiscalValida && document.getElementById('fiscal-resultado')?.style.display !== 'none') {
+          resGlobal.style.display = '';
+          resGlobal.innerHTML = `<div class="alert alert-danger" style="margin:0">✕ <strong>Validación fallida.</strong> No se puede autorizar el crédito.</div>`;
+        } else {
+          resGlobal.style.display = 'none';
+        }
+      }
+
+      // Mostrar botón cancelar pedido solo si fiscal es inválida (ya validó y falló)
+      const fiscalResEl = document.getElementById('fiscal-resultado');
+      const fiscalValidada = fiscalResEl && fiscalResEl.style.display !== 'none';
+      if (btnCancelar) {
+        btnCancelar.style.display = (fiscalValidada && !fiscalValida) ? '' : 'none';
+      }
+    }
+
+    function cancelarPedidoDesdeCredito() {
+      if (!ERP.pedidoActivo) return;
+      const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
+      if (idx >= 0) {
+        ERP.pedidos[idx].estado = 'Cancelada';
+        ERP.pedidoActivo = ERP.pedidos[idx];
+      }
+      saveState();
+      mostrarToast('Pedido cancelado por situación fiscal inválida', 'danger');
+      volverListaCredito();
+    }
+
+
+    let productosParaOrden = [];
+
+  function abrirModalSolicitarStock(productos) {
+    productosParaOrden = productos;
+    const lista = document.getElementById('solicitar-stock-lista');
+    if (!lista) return;
+    lista.innerHTML = '';
+
+    productos.forEach((p, idx) => {
+      const minCantidad = p.faltante;
+      const div = document.createElement('div');
+      div.style.cssText = 'background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 16px';
+      div.innerHTML = `
+        <div style="font-weight:700; font-size:.875rem; color:var(--neutral-800); margin-bottom:8px">${p.codigo} — ${p.descripcion}</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
+          <div>Stock actual: <strong style="color:var(--neutral-700)">${p.stock}</strong></div>
+          <div>Solicitado: <strong style="color:var(--neutral-700)">${p.cantPedida}</strong></div>
+          <div>ROP: <strong style="color:var(--neutral-700)">${p.rop}</strong></div>
+        </div>
+        <div class="form-group">
+          <label style="font-size:.78rem">Cantidad a producir <span style="color:var(--danger)">*</span> <span style="color:var(--neutral-400); font-weight:400">(mín. ${minCantidad})</span></label>
+          <input type="number" id="ord-cant-${idx}" class="form-control" value="${minCantidad}" min="${minCantidad}"
+            oninput="if(parseInt(this.value)<${minCantidad}) this.value=${minCantidad}">
+        </div>
+      `;
+      lista.appendChild(div);
+    });
+
+    openModal('modal-solicitar-stock');
+  }
+
+  function enviarOrdenProduccion() {
+    closeModal('modal-solicitar-stock');
+
+    productosParaOrden.forEach((p, idx) => {
+      const cantEl = document.getElementById(`ord-cant-${idx}`);
+      const cant   = cantEl ? parseInt(cantEl.value) : p.faltante;
+      const ordenId = 'ORD-' + Date.now() + '-' + idx;
+      agregarNotificacion('SOLICITADA', `${p.codigo} — ${p.descripcion}`, cant, ordenId);
+    });
+
+    actualizarBadgeNotif();
+  }
 
   /* ── Confirmar pedido tras verificar stock ── */
   function confirmarPedidoStock() {
@@ -560,7 +831,6 @@
 
   /* ── Volver a la lista ── */
   function volverListaCredito() {
-    sessionStorage.removeItem('erp_pedido_credito');
     ERP.pedidoActivo = null;
     document.getElementById('seccion-form-credito').style.display = 'none';
     document.getElementById('seccion-lista-credito').style.display = '';
@@ -575,25 +845,87 @@
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    let hayInsuficiente = false;
+    let productosProblema = []; // { codigo, descripcion, cantPedida, stock, rop, faltante }
+
     ERP.pedidoActivo.productos.forEach(p => {
-      const prod = ERP.productos.find(x => x.codigo === p.codigo);
+      const prod      = ERP.productos.find(x => x.codigo === p.codigo);
       const existencia = prod ? prod.stock : 0;
+      const rop        = prod ? (prod.rop || 0) : 0;
       const suficiente = existencia >= p.cantidad;
+      const stockTras  = existencia - p.cantidad;
+      const enReorden  = suficiente && stockTras < rop;
+
+      let estadoHTML, estadoKey;
+      if (!suficiente) {
+        estadoHTML = '<span class="badge badge-bloqueado">✗ Insuficiente</span>';
+        estadoKey  = 'insuficiente';
+        hayInsuficiente = true;
+        productosProblema.push({
+          codigo: p.codigo, descripcion: p.descripcion,
+          cantPedida: p.cantidad, stock: existencia, rop,
+          faltante: p.cantidad - existencia + rop
+        });
+      } else if (enReorden) {
+        estadoHTML = '<span class="badge badge-warning">⚠ En punto de Reorden</span>';
+        estadoKey  = 'reorden';
+        productosProblema.push({
+          codigo: p.codigo, descripcion: p.descripcion,
+          cantPedida: p.cantidad, stock: existencia, rop,
+          faltante: rop - stockTras
+        });
+      } else {
+        estadoHTML = '<span class="badge badge-activo">✓ Suficiente</span>';
+        estadoKey  = 'ok';
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${p.codigo}</td>
         <td>${p.descripcion}</td>
         <td><strong>${p.cantidad.toLocaleString()}</strong></td>
         <td>${existencia.toLocaleString()}</td>
-        <td>${suficiente
-          ? '<span class="badge badge-activo">✓ Suficiente</span>'
-          : '<span class="badge badge-bloqueado">✗ Insuficiente</span>'}</td>
+        <td>${rop}</td>
+        <td>${estadoHTML}</td>
       `;
       tbody.appendChild(tr);
     });
 
+    // Actualizar thead para incluir columna ROP
+    const thead = tbody.closest('table').querySelector('thead tr');
+    if (thead && thead.children.length < 6) {
+      thead.innerHTML = `
+        <th>Código</th><th>Descripción</th>
+        <th>Cantidad Pedida</th><th>Existencia Actual</th>
+        <th>Punto de Reorden</th><th>Estado</th>
+      `;
+    }
+
     const btnConf = document.getElementById('btn-confirmar-pedido');
-    if (btnConf) btnConf.disabled = false;
+    if (btnConf) btnConf.disabled = hayInsuficiente;
+
+    // Botón solicitar stock
+    let btnSolicitar = document.getElementById('btn-solicitar-stock');
+    if (productosProblema.length > 0) {
+      if (!btnSolicitar) {
+        btnSolicitar = document.createElement('button');
+        btnSolicitar.id = 'btn-solicitar-stock';
+        btnSolicitar.className = 'btn btn-warning';
+        btnSolicitar.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Solicitar Stock del producto`;
+        const contenedor = document.querySelector('#seccion-stock .erp-card .erp-card-body');
+        if (contenedor) contenedor.appendChild(btnSolicitar);
+      }
+      btnSolicitar.style.display = '';
+      btnSolicitar.onclick = () => abrirModalSolicitarStock(productosProblema);
+    } else if (btnSolicitar) {
+      btnSolicitar.style.display = 'none';
+    }
+
+    if (btnConf) btnConf.disabled = hayInsuficiente;
     mostrarToast('Stock consultado correctamente', 'info');
   };
 </script>
