@@ -315,6 +315,12 @@
 
         <div class="erp-card">
           <div class="erp-card-body" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+            <button class="btn btn-danger" onclick="confirmarCancelarPedidoCredito()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Cancelar Pedido
+            </button>
             <button class="btn btn-primary" onclick="consultarStock()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -436,6 +442,30 @@
   </div>
 </div>
 
+<!-- MODAL: Cancelar pedido (confirmación) -->
+<div id="modal-cancelar-pedido-confirm" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-danger">🚫</div>
+      <div>
+        <div class="modal-title">Cancelar pedido</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>¿Confirmas que deseas <strong>cancelar el pedido <span id="cancelar-ped-folio-texto">—</span></strong>?</p>
+      <br>
+      <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-size:.82rem; color:#991b1b">
+        ⚠️ El pedido pasará a estado <strong>Cancelada</strong> y el crédito comprometido será revertido automáticamente.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-cancelar-pedido-confirm')">No, mantener</button>
+      <button class="btn btn-danger" onclick="cancelarPedidoDesdeCredito()">Sí, cancelar pedido</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script src="js/components.js"></script>
 <script>
@@ -513,8 +543,23 @@
     fiscalValida = false;
     deudaValida  = false;
     resetEstadosSAT && resetEstadosSAT();
-    evaluarDeuda();
-    evaluarValidaciones();
+
+    // Si el pedido YA tiene crédito aprobado, no mostrar las validaciones como bloqueantes
+    const yaAprobado = ['Validación crédito','Confirmar pedido','Recibido','Empaquetado'].includes(ERP.pedidoActivo.estado);
+
+    if (!yaAprobado) {
+      // Solo evaluar deuda/fiscal si aún no fue aprobado
+      evaluarDeuda();
+      evaluarValidaciones();
+    } else {
+      // Ocultar la sección de validaciones para no confundir con alertas rojas
+      const deudaEl = document.getElementById('deuda-resultado');
+      if (deudaEl) {
+        deudaEl.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Deuda ya validada.</strong> Crédito autorizado en etapa anterior.</div>`;
+      }
+      document.getElementById('validacion-global-resultado').style.display = 'none';
+    }
+
     const btnQR = document.getElementById('btn-validar-qr');
     if (btnQR) btnQR.disabled = true;
     const archivoEl = document.getElementById('archivo-fiscal');
@@ -527,15 +572,38 @@
     // Si el crédito ya fue aprobado, mostrar sección stock
     if (['Validación crédito','Confirmar pedido','Recibido','Empaquetado'].includes(ERP.pedidoActivo.estado)) {
       mostrarSeccionStock();
+      // Fix 6: Restaurar la tabla de stock automáticamente al regresar
+      setTimeout(() => window.consultarStock && window.consultarStock(), 50);
       // Congelar checkbox
       const chk = document.getElementById('chk-credito');
       if (chk) { chk.checked = true; chk.disabled = true; }
+      // Ocultar el formulario de autorización para no pedirlo de nuevo
+      const cardCred = document.getElementById('card-autorizar-credito');
+      if (cardCred) {
+        const footer = cardCred.querySelector('.erp-card-footer');
+        if (footer) footer.style.display = 'none';
+        // Mostrar aviso de crédito ya aprobado
+        let yaAprobadoBanner = document.getElementById('banner-credito-aprobado');
+        if (!yaAprobadoBanner) {
+          yaAprobadoBanner = document.createElement('div');
+          yaAprobadoBanner.id = 'banner-credito-aprobado';
+          yaAprobadoBanner.className = 'alert alert-success';
+          yaAprobadoBanner.style.cssText = 'margin:0 0 0 0; font-size:.875rem';
+          yaAprobadoBanner.innerHTML = '✓ <strong>Crédito ya autorizado.</strong> Continúa desde la sección de stock.';
+          cardCred.querySelector('.erp-card-body')?.prepend(yaAprobadoBanner);
+        }
+        yaAprobadoBanner.style.display = '';
+      }
     }
     if (['Confirmar pedido','Recibido','Empaquetado'].includes(ERP.pedidoActivo.estado)) {
       const btnConf = document.getElementById('btn-confirmar-pedido');
-      if (btnConf) btnConf.disabled = false;
-      const btnEmp = document.getElementById('btn-empaquetar-cred');
-      if (btnEmp) btnEmp.disabled = false;
+      const btnEmp  = document.getElementById('btn-empaquetar-cred');
+      // Confirmar pedido: ya confirmado, solo habilitar Empaquetar
+      // Empaquetado: ambos deshabilitados (ya está listo)
+      if (btnConf) btnConf.disabled = ['Confirmar pedido','Recibido','Empaquetado'].includes(ERP.pedidoActivo.estado);
+      if (btnEmp)  btnEmp.disabled  = (ERP.pedidoActivo.estado === 'Empaquetado');
+      // Permitir empaquetar si ya confirmado
+      if (btnEmp && ['Confirmar pedido','Recibido'].includes(ERP.pedidoActivo.estado)) btnEmp.disabled = false;
     }
   }
 
@@ -591,11 +659,17 @@
       ERP.pedidos[idx].credito_aprobado = true;
       ERP.pedidoActivo = ERP.pedidos[idx];
     }
-    // Sumar el total del pedido al crédito utilizado del cliente
-    const totalPedido = ERP.pedidoActivo.productos.reduce((s, p) => s + p.total, 0);
-    const idxCli = ERP.clientes.findIndex(c => c.id === ERP.pedidoActivo.cliente_id);
-    if (idxCli >= 0) {
-      ERP.clientes[idxCli].credito_utilizado += totalPedido;
+
+    // Fix 3: Sumar el total del pedido al crédito utilizado SOLO si no se ha sumado antes
+    if (!ERP.pedidoActivo.credito_sumado) {
+      const totalPedido = ERP.pedidoActivo.productos.reduce((s, p) => s + p.total, 0);
+      const idxCli = ERP.clientes.findIndex(c => c.id === ERP.pedidoActivo.cliente_id);
+      if (idxCli >= 0) {
+        ERP.clientes[idxCli].credito_utilizado += totalPedido;
+      }
+      // Marcar que ya se sumó para no duplicar en reentradas
+      if (idx >= 0) ERP.pedidos[idx].credito_sumado = true;
+      ERP.pedidoActivo = ERP.pedidos[idx >= 0 ? idx : 0];
     }
     saveState();
 
@@ -727,14 +801,36 @@
 
     function cancelarPedidoDesdeCredito() {
       if (!ERP.pedidoActivo) return;
+
+      // Revertir el crédito sumado si aplica
+      if (ERP.pedidoActivo.credito_sumado) {
+        const totalPedido = ERP.pedidoActivo.productos.reduce((s, p) => s + p.total, 0);
+        const idxCli = ERP.clientes.findIndex(c => c.id === ERP.pedidoActivo.cliente_id);
+        if (idxCli >= 0) {
+          ERP.clientes[idxCli].credito_utilizado = Math.max(
+            0,
+            (ERP.clientes[idxCli].credito_utilizado || 0) - totalPedido
+          );
+        }
+      }
+
       const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
       if (idx >= 0) {
         ERP.pedidos[idx].estado = 'Cancelada';
+        ERP.pedidos[idx].credito_sumado = false;
         ERP.pedidoActivo = ERP.pedidos[idx];
       }
       saveState();
-      mostrarToast('Pedido cancelado por situación fiscal inválida', 'danger');
+      mostrarToast('Pedido cancelado y crédito revertido', 'danger');
+      closeModal('modal-cancelar-pedido-confirm');
       volverListaCredito();
+    }
+
+    function confirmarCancelarPedidoCredito() {
+      const folio = ERP.pedidoActivo?.folio || '—';
+      const el = document.getElementById('cancelar-ped-folio-texto');
+      if (el) el.textContent = folio;
+      openModal('modal-cancelar-pedido-confirm');
     }
 
 
@@ -780,6 +876,13 @@
     });
 
     actualizarBadgeNotif();
+
+    // Habilitar Confirmar Pedido porque la solicitud de producción ya fue enviada
+    const btnConf = document.getElementById('btn-confirmar-pedido');
+    if (btnConf) {
+      btnConf.disabled = false;
+      mostrarToast('Orden de producción enviada — ya puedes confirmar el pedido', 'info');
+    }
   }
 
   /* ── Confirmar pedido tras verificar stock ── */

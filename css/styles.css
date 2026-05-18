@@ -241,6 +241,11 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
   border-radius: 20px;
 }
 
+.sidebar-badge-warning {
+  background: var(--warning);
+  color: #1a1a1a;
+}
+
 .sidebar-divider {
   height: 1px;
   background: rgba(255,255,255,.1);

@@ -19,7 +19,7 @@
         <div class="page-header-left">
           <div class="breadcrumb-trail"><a href="index.html">Dashboard</a> / <span>Facturación</span></div>
           <h1 class="page-title">Facturación</h1>
-          <p class="page-subtitle">Alta y consulta de facturas — Solo pedidos con estado "Recibido"</p>
+          <p class="page-subtitle">Alta y consulta de facturas — Pedidos con estado "Empaquetado" o "Recibido"</p>
         </div>
         <button class="btn btn-primary" onclick="mostrarFormNuevaFactura()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -36,6 +36,7 @@
         </svg>
         <div>
           <strong>Regla de negocio:</strong> Solo se pueden facturar pedidos con estado
+          <span class="badge badge-empaquetado" style="margin:0 4px">Empaquetado</span> o
           <span class="badge badge-recibido" style="margin:0 4px">Recibido</span>
         </div>
       </div>
@@ -131,7 +132,7 @@
             <div class="form-group">
               <label>Folio del Pedido <span class="required">*</span></label>
               <select id="fac-pedido" class="form-select" onchange="autocargarFactura()">
-                <option value="">-- Seleccionar pedido (estado: Recibido) --</option>
+                <option value="">-- Seleccionar pedido (Empaquetado o Recibido) --</option>
               </select>
               <div class="invalid-feedback">Selecciona un pedido válido</div>
             </div>
@@ -141,7 +142,7 @@
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                   <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
-                Solo pedidos con estado <strong>"Recibido"</strong> pueden facturarse
+                Solo pedidos con estado <strong>"Empaquetado"</strong> o <strong>"Recibido"</strong> pueden facturarse
               </div>
             </div>
           </div>
@@ -367,13 +368,13 @@
     const tbody = document.getElementById('pedidos-recibidos-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
-    const recibidos = ERP.pedidos.filter(p => p.estado === 'Recibido');
+    const recibidos = ERP.pedidos.filter(p => p.estado === 'Recibido' || p.estado === 'Empaquetado');
 
     if (recibidos.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align:center; padding:28px; color:var(--neutral-400)">
-            No hay pedidos con estado "Recibido" disponibles para facturar.
+            No hay pedidos con estado "Empaquetado" o "Recibido" disponibles para facturar.
           </td>
         </tr>`;
       return;
@@ -538,7 +539,8 @@
       conceptos:    fa.pedido.productos,
       subtotal:     fa.subtotal,
       iva:          fa.iva,
-      total:        fa.total
+      total:        fa.total,
+      credito_descontado: false
     };
 
     ERP.facturas.push(factura);
@@ -546,6 +548,17 @@
     // Actualizar pedido a "Facturado"
     const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
     if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
+
+    // RESTAR el total de la factura al crédito utilizado del cliente (libera crédito)
+    const idxC = ERP.clientes.findIndex(c => c.id === fa.cliente_id);
+    if (idxC >= 0) {
+      ERP.clientes[idxC].credito_utilizado = Math.max(
+        0,
+        (ERP.clientes[idxC].credito_utilizado || 0) - fa.total
+      );
+    }
+    // Marcar la factura como ya descontada para evitar duplicados
+    ERP.facturas[ERP.facturas.length - 1].credito_descontado = true;
 
     saveState();
 
@@ -555,7 +568,7 @@
     if (mFolio) mFolio.textContent = fa.folio;
     if (mTotal) mTotal.textContent = fmt(fa.total);
 
-    mostrarToast('Factura emitida correctamente', 'success');
+    mostrarToast('Factura emitida — crédito liberado correctamente', 'success');
     openModal('modal-factura-creada');
   };
 

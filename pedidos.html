@@ -144,7 +144,7 @@
             </div>
             <div class="form-group">
               <label>Fecha de Envío Estimada</label>
-              <input type="date" id="ped-fecha-envio" class="form-control">
+              <input type="date" id="ped-fecha-envio" class="form-control" oninput="validarFechaEnvio(this)">
             </div>
           </div>
 
@@ -212,7 +212,14 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
-            Cancelar
+            Volver
+          </button>
+          <!-- Botón cancelar pedido: visible solo cuando hay pedido activo guardado -->
+          <button id="btn-cancelar-pedido-form" class="btn btn-danger" style="display:none" onclick="confirmarCancelarPedidoForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            Cancelar Pedido
           </button>
           <button id="btn-guardar-pedido" class="btn btn-primary" onclick="guardarPedido()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -381,6 +388,35 @@
 <script src="js/app.js"></script>
 <script src="js/components.js"></script>
 <script>
+  /* ── Validación: Fecha de Envío no puede ser anterior a hoy ── */
+  function validarFechaEnvio(input) {
+    const hoy = today();
+    if (input.value && input.value < hoy) {
+      input.classList.add('is-invalid');
+      mostrarToast('La Fecha de Envío Estimada no puede ser anterior a hoy', 'warning');
+    } else {
+      input.classList.remove('is-invalid');
+    }
+  }
+
+  // Parchamos guardarPedido para incluir la validación de fecha
+  const _guardarPedidoOrig = window.guardarPedido || guardarPedido;
+  window.guardarPedido = function() {
+    const fechaEnvInput = document.getElementById('ped-fecha-envio');
+    if (fechaEnvInput && fechaEnvInput.value && fechaEnvInput.value < today()) {
+      fechaEnvInput.classList.add('is-invalid');
+      mostrarToast('La Fecha de Envío Estimada no puede ser anterior a hoy', 'warning');
+      return;
+    }
+    _guardarPedidoOrig();
+  };
+
+  // Al abrir el formulario de nuevo pedido, establecer el mínimo de fecha
+  function setMinFechaEnvio() {
+    const input = document.getElementById('ped-fecha-envio');
+    if (input) input.min = today();
+  }
+
   function mostrarFormNuevoPedido() {
     ERP.pedidoActivo = null;
     ERP.modoEdicion = false;
@@ -389,6 +425,7 @@
     document.getElementById('ped-form-titulo').textContent = 'Nuevo Pedido';
     nuevoPedido();
     cargarClientesSel();
+    setMinFechaEnvio();
   }
 
   function mostrarListaPedidos() {
@@ -402,9 +439,13 @@
     const p = ERP.pedidos.find(x => x.folio === folio);
     if (!p) return;
 
-    // Bloquear edición si ya está facturado
+    // Bloquear edición si ya está facturado o empaquetado
     if (p.estado === 'Facturado') {
       mostrarToast('No se puede editar un pedido ya facturado', 'warning');
+      return;
+    }
+    if (p.estado === 'Empaquetado') {
+      mostrarToast('No se puede editar un pedido ya empaquetado', 'warning');
       return;
     }
 
@@ -414,6 +455,7 @@
     document.getElementById('pedido-form-container').style.display = '';
     document.getElementById('ped-form-titulo').textContent = folio;
     cargarClientesSel();
+    setMinFechaEnvio();
     // Esperar a que el DOM esté listo
     setTimeout(() => llenarFormPedido(p), 50);
   };
@@ -516,6 +558,77 @@
     if (folioViendose) window.editarPedido(folioViendose);
   }
 
+  /* ── Cancelar Pedido desde el formulario ── */
+  function confirmarCancelarPedidoForm() {
+    const p = ERP.pedidoActivo;
+    if (!p) return;
+    const el = document.getElementById('cancel-form-ped-folio');
+    if (el) el.textContent = p.folio;
+    // Mostrar estado actual para contexto
+    const elEst = document.getElementById('cancel-form-ped-estado');
+    if (elEst) elEst.innerHTML = badgeHTML(p.estado);
+    openModal('modal-cancelar-pedido-form');
+  }
+
+  function ejecutarCancelarPedidoForm() {
+    closeModal('modal-cancelar-pedido-form');
+    const p = ERP.pedidoActivo;
+    if (!p) return;
+
+    // Revertir crédito si ya fue sumado
+    if (p.credito_sumado) {
+      const totalPedido = p.productos.reduce((s, x) => s + x.total, 0);
+      const idxCli = ERP.clientes.findIndex(c => c.id === p.cliente_id);
+      if (idxCli >= 0) {
+        ERP.clientes[idxCli].credito_utilizado = Math.max(
+          0,
+          (ERP.clientes[idxCli].credito_utilizado || 0) - totalPedido
+        );
+      }
+    }
+
+    const idx = ERP.pedidos.findIndex(x => x.folio === p.folio);
+    if (idx >= 0) {
+      ERP.pedidos[idx].estado = 'Cancelada';
+      ERP.pedidos[idx].credito_sumado = false;
+    }
+    saveState();
+    mostrarToast(`Pedido ${p.folio} cancelado`, 'danger');
+    mostrarListaPedidos();
+  }
+
+  /* ── Mostrar / ocultar botón Cancelar Pedido según estado ── */
+  function actualizarBotonCancelarPedido() {
+    const btn = document.getElementById('btn-cancelar-pedido-form');
+    if (!btn) return;
+    const p = ERP.pedidoActivo;
+    // Mostrar si hay un pedido activo que aún se puede cancelar
+    const cancelable = p && !['Facturado','Empaquetado','Cancelada'].includes(p.estado);
+    btn.style.display = cancelable ? '' : 'none';
+  }
+
+  // Enganchar al editarPedido para que actualice el botón al abrir
+  const _editarPedidoOrigCancel = window.editarPedido;
+  window.editarPedido = function(folio) {
+    _editarPedidoOrigCancel(folio);
+    setTimeout(actualizarBotonCancelarPedido, 60);
+  };
+
+  // También al mostrar nuevo pedido (nunca cancelable hasta guardarlo)
+  const _mostrarFormNuevoPedidoOrig = window.mostrarFormNuevoPedido;
+  window.mostrarFormNuevoPedido = function() {
+    _mostrarFormNuevoPedidoOrig && _mostrarFormNuevoPedidoOrig();
+    const btn = document.getElementById('btn-cancelar-pedido-form');
+    if (btn) btn.style.display = 'none';
+  };
+
+  // Y después de guardar, mostrar el botón si el pedido ya existe
+  const _confirmarGuardarPedidoOrig = window.confirmarGuardarPedido;
+  window.confirmarGuardarPedido = function() {
+    _confirmarGuardarPedidoOrig && _confirmarGuardarPedidoOrig();
+    setTimeout(actualizarBotonCancelarPedido, 60);
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     const pedidoEditar = sessionStorage.getItem('erp_pedido_editar');
     if (pedidoEditar) {
@@ -524,5 +637,33 @@
     }
   });
 </script>
+
+<!-- MODAL: Cancelar Pedido desde formulario -->
+<div id="modal-cancelar-pedido-form" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon modal-icon-danger">🚫</div>
+      <div>
+        <div class="modal-title">Cancelar pedido</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>¿Confirmas que deseas <strong>cancelar el pedido <span id="cancel-form-ped-folio">—</span></strong>?</p>
+      <div style="margin:12px 0; display:flex; align-items:center; gap:8px">
+        <span style="color:var(--neutral-500); font-size:.83rem">Estado actual:</span>
+        <span id="cancel-form-ped-estado"></span>
+      </div>
+      <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-size:.82rem; color:#991b1b">
+        ⚠️ El pedido pasará a estado <strong>Cancelada</strong>. Si el crédito ya fue comprometido, se revertirá automáticamente.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-cancelar-pedido-form')">No, mantener</button>
+      <button class="btn btn-danger" onclick="ejecutarCancelarPedidoForm()">Sí, cancelar pedido</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

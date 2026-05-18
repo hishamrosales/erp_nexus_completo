@@ -272,7 +272,7 @@
                   <div class="form-grid form-grid-3">
                     <div class="form-group">
                       <label>Método de pago</label>
-                      <select id="cli-metodo" class="form-select">
+                      <select id="cli-metodo" class="form-select" onchange="toggleBancoPorMetodo(this.value)">
                         <option value="">-- Seleccionar --</option>
                         <option value="Transferencia bancaria">Transferencia bancaria</option>
                         <option value="Cheque">Cheque</option>
@@ -507,6 +507,52 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'new') mostrarFormNuevo();
   });
+
+  /* ── Fix 1: Ocultar/bloquear banco cuando el método es Efectivo ── */
+  function toggleBancoPorMetodo(metodo) {
+    const esEfectivo = metodo === 'Efectivo';
+    const camposBanco = ['cli-banco','cli-cuenta','cli-clabe'];
+    camposBanco.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = esEfectivo;
+      if (esEfectivo) {
+        el.value = '';
+        el.style.background = 'var(--neutral-100)';
+        el.style.color = 'var(--neutral-400)';
+        el.style.cursor = 'not-allowed';
+      } else {
+        el.style.background = '';
+        el.style.color = '';
+        el.style.cursor = '';
+      }
+    });
+    // Actualizar etiqueta visual
+    const secBanco = document.querySelector('.form-section:nth-of-type(2) .form-section-title');
+    // Mostrar aviso si es efectivo
+    let aviso = document.getElementById('aviso-efectivo');
+    if (esEfectivo) {
+      if (!aviso) {
+        aviso = document.createElement('div');
+        aviso.id = 'aviso-efectivo';
+        aviso.className = 'alert alert-info';
+        aviso.style.cssText = 'margin-top:10px; font-size:.82rem';
+        aviso.innerHTML = 'ℹ️ El método <strong>Efectivo</strong> no requiere datos bancarios.';
+        const contenedor = document.getElementById('cli-banco')?.closest('.form-section');
+        if (contenedor) contenedor.insertAdjacentElement('afterbegin', aviso);
+      }
+      aviso.style.display = '';
+    } else if (aviso) {
+      aviso.style.display = 'none';
+    }
+  }
+
+  // Aplicar al cargar el form si ya tiene Efectivo seleccionado
+  const _llenarFormClienteOrig = window.llenarFormCliente || llenarFormCliente;
+  window.llenarFormCliente = function(c) {
+    _llenarFormClienteOrig(c);
+    if (c.metodo_pago) toggleBancoPorMetodo(c.metodo_pago);
+  };
 </script>
 </body>
 </html>

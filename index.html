@@ -245,29 +245,55 @@
 <script src="js/components.js"></script>
 <script>
   // Llenar tabla de pedidos del dashboard
-  document.addEventListener('DOMContentLoaded', () => {
-    const tbody = document.getElementById('dash-pedidos-tbody');
-    if (!tbody) return;
+  function renderDashboard() {
+    // Garantizar que el estado más reciente esté cargado
+    loadState();
 
-    ERP.pedidos.slice(0, 5).forEach(p => {
-      const cli = ERP.clientes.find(c => c.id === p.cliente_id);
-      const total = p.productos.reduce((s,x) => s+x.total, 0);
-      tbody.insertAdjacentHTML('beforeend', `
-        <tr>
-          <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
-          <td>${cli ? cli.nombre.split(' ')[0] + '...' : p.cliente_id}</td>
-          <td>${fmtDate(p.fecha)}</td>
-          <td>${badgeHTML(p.estado)}</td>
-          <td class="fw-semibold">${fmt(total)}</td>
-        </tr>
-      `);
-    });
+    const tbody = document.getElementById('dash-pedidos-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      // Mostrar los 5 pedidos más recientes (último primero)
+      const recientes = [...ERP.pedidos].reverse().slice(0, 5);
+      if (recientes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--neutral-400)">Sin pedidos registrados</td></tr>`;
+      } else {
+        recientes.forEach(p => {
+          const cli   = ERP.clientes.find(c => c.id === p.cliente_id);
+          const total = p.productos.reduce((s, x) => s + x.total, 0);
+          const nombre = cli ? (cli.nombre.length > 22 ? cli.nombre.slice(0, 22) + '…' : cli.nombre) : p.cliente_id;
+          tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
+              <td style="font-size:.82rem">${nombre}</td>
+              <td>${fmtDate(p.fecha)}</td>
+              <td>${badgeHTML(p.estado)}</td>
+              <td class="fw-semibold">${fmt(total)}</td>
+            </tr>
+          `);
+        });
+      }
+    }
 
     // KPIs dinámicos
-    document.getElementById('kpi-clientes').textContent = ERP.clientes.filter(c=>c.estado==='activo').length;
-    document.getElementById('kpi-pedidos').textContent  = ERP.pedidos.length;
-    document.getElementById('kpi-creditos').textContent = ERP.pedidos.filter(p=>p.estado==='Validación cliente').length;
-    document.getElementById('kpi-facturas').textContent = ERP.facturas.length;
+    const kpiC = document.getElementById('kpi-clientes');
+    const kpiP = document.getElementById('kpi-pedidos');
+    const kpiCr = document.getElementById('kpi-creditos');
+    const kpiF = document.getElementById('kpi-facturas');
+    if (kpiC)  kpiC.textContent  = ERP.clientes.filter(c => c.estado === 'activo').length;
+    if (kpiP)  kpiP.textContent  = ERP.pedidos.length;
+    if (kpiCr) kpiCr.textContent = ERP.pedidos.filter(p => p.estado === 'Validación cliente').length;
+    if (kpiF)  kpiF.textContent  = ERP.facturas.length;
+
+    // Ventas del mes (suma facturas del mes actual)
+    const hoy = new Date();
+    const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+    const ventasMes = ERP.facturas
+      .filter(f => f.fecha && f.fecha.startsWith(mesActual))
+      .reduce((s, f) => s + (f.total || 0), 0);
+    const kpiVentas = document.getElementById('kpi-ventas-mes');
+    if (kpiVentas) kpiVentas.textContent = ventasMes >= 1000
+      ? '$' + (ventasMes/1000).toFixed(1) + 'K'
+      : fmt(ventasMes);
 
     // Contadores del flujo del proceso
     const flujoEstados = [
@@ -277,16 +303,17 @@
       { id: 'flow-count-4', estados: ['Recibido', 'Empaquetado'] },
       { id: 'flow-count-5', estados: ['Facturado'] },
     ];
-
     flujoEstados.forEach(({ id, estados }) => {
       const count = ERP.pedidos.filter(p => estados.includes(p.estado)).length;
       const el = document.getElementById(id);
-      if (el && count > 0) {
-        el.textContent = count;
-        el.style.display = '';
+      if (el) {
+        if (count > 0) { el.textContent = count; el.style.display = ''; }
+        else { el.style.display = 'none'; }
       }
     });
-  });
+  }
+
+  document.addEventListener('DOMContentLoaded', renderDashboard);
 </script>
 </body>
 </html>

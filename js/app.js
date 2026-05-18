@@ -438,7 +438,9 @@ function renderTablaPedidos() {
   ERP.pedidos.forEach(p => {
     const cli = ERP.clientes.find(c => c.id === p.cliente_id);
     const total = p.productos.reduce((s, x) => s + x.total, 0);
-    const esFacturado = p.estado === 'Facturado';
+    const esFacturado   = p.estado === 'Facturado';
+    const esEmpaquetado = p.estado === 'Empaquetado';
+    const bloqueado     = esFacturado || esEmpaquetado;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
@@ -450,10 +452,10 @@ function renderTablaPedidos() {
       <td>
         <div class="d-flex gap-2">
           <button class="btn btn-secondary btn-sm" onclick="abrirModalVerPedido('${p.folio}')">Ver</button>
-          ${esFacturado
-            ? `<button class="btn btn-sm" disabled title="Pedido facturado — no editable" style="background:#e5e7eb; color:#9ca3af; cursor:not-allowed">
+          ${bloqueado
+            ? `<button class="btn btn-sm" disabled title="Pedido ${esFacturado ? 'facturado' : 'empaquetado'} — no editable" style="background:#e5e7eb; color:#9ca3af; cursor:not-allowed">
                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                 Facturado
+                 ${esFacturado ? 'Facturado' : 'Empaquetado'}
                </button>`
             : `<button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>`
           }
@@ -531,9 +533,13 @@ function editarPedido(folio) {
   const p = ERP.pedidos.find(x => x.folio === folio);
   if (!p) return;
 
-  // Bloquear edición si ya está facturado
+  // Bloquear edición si ya está facturado o empaquetado
   if (p.estado === 'Facturado') {
     mostrarToast('No se puede editar un pedido ya facturado', 'warning');
+    return;
+  }
+  if (p.estado === 'Empaquetado') {
+    mostrarToast('No se puede editar un pedido ya empaquetado', 'warning');
     return;
   }
 
@@ -942,6 +948,9 @@ function empaquetar() {
   const pedBadge = document.getElementById('ped-estado-badge');
   if (pedBadge) pedBadge.innerHTML = badgeHTML('Empaquetado');
 
+  // Actualizar badge de punto de reorden en el sidebar
+  if (typeof actualizarBadgeReorden === 'function') actualizarBadgeReorden();
+
   renderTablaPedidos();
   mostrarToast('Pedido empaquetado — Stock actualizado', 'success');
   openModal('modal-pedido-listo');
@@ -1071,10 +1080,13 @@ function confirmarGuardarFactura() {
   const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
   if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
 
-  // Actualizar crédito utilizado del cliente (restar el total de la factura, pago registrado)
+  // Fix 4: Restar el total de la factura al crédito utilizado del cliente (solo una vez)
   const idxC = ERP.clientes.findIndex(c => c.id === fa.cliente_id);
-  if (idxC >= 0) {
+  if (idxC >= 0 && !factura.credito_descontado) {
     ERP.clientes[idxC].credito_utilizado = Math.max(0, (ERP.clientes[idxC].credito_utilizado || 0) - fa.total);
+    factura.credito_descontado = true;
+    // Actualizar la factura recién insertada con el flag
+    ERP.facturas[ERP.facturas.length - 1].credito_descontado = true;
   }
 
   saveState();

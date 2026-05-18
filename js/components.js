@@ -1,4 +1,4 @@
-  const SHARED_LAYOUT = `
+const SHARED_LAYOUT = `
   <!-- ══════════════ NAVBAR ══════════════ -->
   <nav class="erp-navbar">
     <div class="brand">
@@ -12,14 +12,17 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
-        <span id="notif-badge" style="display:none; position:absolute; top:4px; right:4px; width:10px; height:10px; background:var(--danger); border-radius:50%; border:2px solid #fff"></span>
+        <span id="notif-badge" style="display:none; position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px; background:var(--danger); border-radius:8px; border:2px solid #fff; font-size:9px; font-weight:800; color:#fff; line-height:12px; text-align:center; font-family:'DM Sans',sans-serif; box-sizing:border-box"></span>
       </button>
 
       <!-- Panel de notificaciones -->
       <div id="notif-panel" style="display:none; position:fixed; top:calc(var(--navbar-height) + 4px); right:16px; width:340px; background:#fff; border-radius:12px; box-shadow:var(--shadow-lg); border:1px solid var(--neutral-200); z-index:1500; overflow:hidden">
         <div style="padding:14px 18px; border-bottom:1px solid var(--neutral-100); display:flex; align-items:center; justify-content:space-between">
           <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:.95rem; color:var(--neutral-800)">Notificaciones</span>
-          <button onclick="toggleNotificaciones()" style="border:none; background:none; cursor:pointer; color:var(--neutral-400); font-size:1.2rem; line-height:1">×</button>
+          <div style="display:flex; align-items:center; gap:8px">
+            <button onclick="limpiarNotificaciones()" title="Limpiar todas" style="border:none; background:none; cursor:pointer; color:var(--neutral-400); font-size:.72rem; font-weight:600; font-family:'DM Sans',sans-serif; padding:3px 7px; border-radius:4px; line-height:1.4" onmouseover="this.style.background='var(--neutral-100)'; this.style.color='var(--neutral-600)'" onmouseout="this.style.background='none'; this.style.color='var(--neutral-400)'">Limpiar todo</button>
+            <button onclick="toggleNotificaciones()" style="border:none; background:none; cursor:pointer; color:var(--neutral-400); font-size:1.2rem; line-height:1">×</button>
+          </div>
         </div>
         <div id="notif-lista" style="max-height:380px; overflow-y:auto; padding:8px"></div>
       </div>
@@ -69,6 +72,17 @@
           </svg>
           Pedidos
           <span class="sidebar-badge" id="badge-pedidos">0</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" onclick="solicitarStockMasivo(); return false;" id="nav-orden-produccion">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          Orden de Producción
+          <span class="sidebar-badge sidebar-badge-warning" id="badge-reorden" style="display:none">0</span>
         </a>
       </li>
       <li>
@@ -242,21 +256,31 @@
   function actualizarBadgeNotif() {
     const badge = document.getElementById('notif-badge');
     if (!badge) return;
-    const hayActivas = ERP.notificaciones.filter(n => {
-      if (n.estado === 'APROBADA' || n.estado === 'REPROCESO') return true;
-      return !n.oculta;
-    }).length > 0;
-    badge.style.display = hayActivas ? '' : 'none';
+    const estadosActivos = ['SOLICITADA', 'PLANIFICADA', 'PRODUCCIÓN'];
+    const activas = ERP.notificaciones.filter(n => !n.oculta && estadosActivos.includes(n.estado));
+    if (activas.length > 0) {
+      badge.textContent = activas.length > 9 ? '9+' : String(activas.length);
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function limpiarNotificaciones() {
+    const cerradas = ['APROBADA', 'REPROCESO'];
+    ERP.notificaciones = ERP.notificaciones.filter(n => !cerradas.includes(n.estado));
+    saveState();
+    actualizarBadgeNotif();
+    actualizarBadgeReorden();
+    renderNotificaciones();
+    mostrarToast('Historial de órdenes limpiado', 'success');
   }
 
   function renderNotificaciones() {
     const lista = document.getElementById('notif-lista');
     if (!lista) return;
-    // Verdes (APROBADA) y rojas (REPROCESO) nunca se ocultan
-    const visibles = ERP.notificaciones.filter(n => {
-      if (n.estado === 'APROBADA' || n.estado === 'REPROCESO') return true;
-      return !n.oculta;
-    });
+    // Mostrar solo notificaciones que no estén ocultas
+    const visibles = ERP.notificaciones.filter(n => !n.oculta);
     if (visibles.length === 0) {
       lista.innerHTML = `<div style="text-align:center; padding:28px; color:var(--neutral-400); font-size:.85rem">Sin notificaciones</div>`;
       return;
@@ -281,14 +305,21 @@
 
   function agregarNotificacion(estado, producto, cantidad, ordenId, extra) {
     const id = 'notif-' + Date.now();
+    // _codigo se pasa en extra desde enviarPlanificador/enviarOperario para preservar el código limpio
+    const codigoProducto = (extra && extra._codigo)
+      ? extra._codigo
+      : (producto ? producto.split(' — ')[0].trim() : '');
+    const extraLimpio = extra ? { ...extra } : {};
+    delete extraLimpio._codigo;
     ERP.notificaciones.push({
-      id, estado, producto, cantidad,
+      id, estado, producto, codigoProducto, cantidad,
       ordenId: ordenId || id,
       fecha: new Date().toLocaleDateString('es-MX'),
-      extra: extra || {},
+      extra: extraLimpio,
       oculta: false,
       cerrada: false
     });
+    saveState();
     actualizarBadgeNotif();
     mostrarToast('Correo y Notificaciones Enviadas', 'success');
     return id;
@@ -331,7 +362,7 @@
             </div>
             <div class="form-group" style="margin-bottom:14px">
               <label>Fecha de producción <span style="color:var(--danger)">*</span></label>
-              <input type="date" id="plan-fecha" class="form-control">
+              <input type="date" id="plan-fecha" class="form-control" oninput="validarFechaPlanificador(this)">
             </div>
             <div class="form-group">
               <label>Observaciones de planificación</label>
@@ -349,10 +380,23 @@
     document.getElementById('plan-subtitulo').textContent = 'Orden: ' + n.ordenId;
     document.getElementById('plan-producto').value  = n.producto;
     document.getElementById('plan-cantidad').value  = n.cantidad;
-    document.getElementById('plan-fecha').value     = '';
+    const planFechaEl = document.getElementById('plan-fecha');
+    planFechaEl.value = '';
+    planFechaEl.min   = new Date().toISOString().slice(0,10);
+    planFechaEl.classList.remove('is-invalid');
     document.getElementById('plan-obs').value       = '';
     overlay.dataset.notifId = n.id;
     openModal('modal-planificador');
+  }
+
+  function validarFechaPlanificador(input) {
+    const hoy = new Date().toISOString().slice(0,10);
+    if (input.value && input.value < hoy) {
+      input.classList.add('is-invalid');
+      mostrarToast('La Fecha de Producción no puede ser anterior a hoy', 'warning');
+    } else {
+      input.classList.remove('is-invalid');
+    }
   }
 
   function enviarPlanificador() {
@@ -361,10 +405,18 @@
     if (!n) return;
     const fecha = document.getElementById('plan-fecha').value;
     if (!fecha) { mostrarToast('Ingresa la fecha de producción', 'warning'); return; }
+    const hoy = new Date().toISOString().slice(0,10);
+    if (fecha < hoy) {
+      document.getElementById('plan-fecha').classList.add('is-invalid');
+      mostrarToast('La Fecha de Producción no puede ser anterior a hoy', 'warning');
+      return;
+    }
     n.extra.fechaProd = fecha;
     n.extra.obs = document.getElementById('plan-obs').value;
+    // Ocultar la notif SOLICITADA para que no vuelva a aparecer (evita el ciclo)
+    n.oculta = true;
     closeModal('modal-planificador');
-    agregarNotificacion('PLANIFICADA', n.producto, n.cantidad, n.ordenId, { fechaProd: fecha });
+    agregarNotificacion('PLANIFICADA', n.producto, n.cantidad, n.ordenId, { fechaProd: fecha, _codigo: n.codigoProducto });
   }
 
   /* ── Modal Operario ── */
@@ -425,8 +477,10 @@
     if (!document.getElementById('chk-fabricacion').checked) {
       mostrarToast('Marca la casilla "En fabricación"', 'warning'); return;
     }
+    // Ocultar la notif PLANIFICADA para que no vuelva a aparecer (evita el ciclo)
+    n.oculta = true;
     closeModal('modal-operario');
-    agregarNotificacion('PRODUCCIÓN', n.producto, n.cantidad, n.ordenId, n.extra);
+    agregarNotificacion('PRODUCCIÓN', n.producto, n.cantidad, n.ordenId, { ...n.extra, _codigo: n.codigoProducto });
   }
 
   /* ── Modal Inspector ── */
@@ -508,38 +562,79 @@
     const noAprobado = document.getElementById('chk-no-aprobado').checked;
     if (!aprobado && !noAprobado) { mostrarToast('Selecciona un resultado', 'warning'); return; }
 
-    // Marcar la notificación de PRODUCCIÓN como cerrada visualmente (no oculta)
-    n.cerrada = true;
     document.getElementById('chk-aprobado').disabled    = true;
     document.getElementById('chk-no-aprobado').disabled = true;
     closeModal('modal-inspector');
 
-    if (aprobado) {
-      // Ocultar todas las de esta orden excepto la nueva APROBADA
-      ERP.notificaciones.forEach(x => {
-        if (x.ordenId === n.ordenId && x.id !== n.id) x.oculta = true;
-      });
-      n.oculta = true;
-      agregarNotificacion('APROBADA', n.producto, n.cantidad, n.ordenId, n.extra);
+    // Ocultar todas las notificaciones de esta orden (ya terminó, sea aprobada o reproceso)
+    ERP.notificaciones.forEach(x => {
+      if (x.ordenId === n.ordenId) x.oculta = true;
+    });
 
-      // Sumar al stock la cantidad producida
-      const prod = ERP.productos.find(p => p.descripcion === n.producto || p.codigo === n.producto);
+    if (aprobado) {
+      // Crear notificación de cierre APROBADA (visible para historial)
+      const idAprobada = 'notif-aprobada-' + Date.now();
+      ERP.notificaciones.push({
+        id: idAprobada, estado: 'APROBADA',
+        producto: n.producto,
+        codigoProducto: n.codigoProducto,
+        cantidad: n.cantidad,
+        ordenId: n.ordenId,
+        fecha: new Date().toLocaleDateString('es-MX'),
+        extra: n.extra || {},
+        oculta: false,
+        cerrada: true
+      });
+
+      // Sumar al stock — codigoProducto ya viene limpio desde la creación de la notif
+      const codigo = n.codigoProducto || (n.producto ? n.producto.split(' — ')[0].trim() : '');
+      const prod = ERP.productos.find(p => p.codigo === codigo);
       if (prod) {
         prod.stock = (prod.stock || 0) + (n.cantidad || 0);
-        mostrarToast(`Stock de ${prod.codigo} actualizado (+${n.cantidad})`, 'success');
+        saveState();
+        actualizarBadgeReorden();
+        mostrarToast(`✓ Stock de ${prod.codigo} actualizado (+${n.cantidad} uds)`, 'success');
+      } else {
+        saveState();
+        mostrarToast('Orden de Producción aprobada', 'success');
       }
-      mostrarToast('Orden de Producción Confirmada', 'success');
     } else {
-      // Reproceso: marcar como REPROCESO y relanzar desde planificador
-      n.estado = 'REPROCESO';
-      actualizarBadgeNotif();
-      mostrarToast('Orden de Producción en Reproceso', 'warning');
-      // Crear nueva notificación SOLICITADA para reiniciar el ciclo
+      // Reproceso: registrar y relanzar con nuevo ordenId (sin ciclar)
+      const idReproceso = 'notif-rep-' + Date.now();
+      ERP.notificaciones.push({
+        id: idReproceso, estado: 'REPROCESO',
+        producto: n.producto,
+        codigoProducto: n.codigoProducto || (n.producto ? n.producto.split('—')[0].trim() : ''),
+        cantidad: n.cantidad,
+        ordenId: n.ordenId,
+        fecha: new Date().toLocaleDateString('es-MX'),
+        extra: n.extra || {},
+        oculta: false,
+        cerrada: true
+      });
+      saveState();
+      mostrarToast('Orden en reproceso — se reabrirá la solicitud', 'warning');
+
+      // Nueva SOLICITADA con ordenId fresco para reiniciar el ciclo limpiamente
       setTimeout(() => {
-        agregarNotificacion('SOLICITADA', n.producto, n.cantidad, n.ordenId, n.extra);
-      }, 500);
+        const nuevaId = 'notif-' + (Date.now() + 1);
+        ERP.notificaciones.push({
+          id: nuevaId, estado: 'SOLICITADA',
+          producto: n.producto,
+          codigoProducto: n.codigoProducto || (n.producto ? n.producto.split('—')[0].trim() : ''),
+          cantidad: n.cantidad,
+          ordenId: 'ORD-' + Date.now() + '-rep',
+          fecha: new Date().toLocaleDateString('es-MX'),
+          extra: {},
+          oculta: false,
+          cerrada: false
+        });
+        saveState();
+        actualizarBadgeNotif();
+        mostrarToast('Nueva solicitud de producción enviada', 'info');
+      }, 600);
     }
-    saveState();
+
     actualizarBadgeNotif();
   }
 
@@ -585,10 +680,161 @@
     openModal('modal-cerrado-notif');
   }
 
+  /* ── Actualizar badge de punto de reorden ── */
+  function actualizarBadgeReorden() {
+    const badge = document.getElementById('badge-reorden');
+    if (!badge) return;
+    const estadosActivos = ['SOLICITADA', 'PLANIFICADA', 'PRODUCCIÓN'];
+    const productosConOrdenActiva = new Set(
+      ERP.notificaciones
+        .filter(n => !n.oculta && estadosActivos.includes(n.estado))
+        .map(n => n.codigoProducto)
+    );
+    const sinOrden = ERP.productos.filter(p =>
+      p.stock <= p.rop && !productosConOrdenActiva.has(p.codigo)
+    ).length;
+    badge.textContent = sinOrden;
+    badge.style.display = sinOrden > 0 ? '' : 'none';
+  }
+
+  /* ── Orden de Producción masiva: solicita stock para todos los productos en punto de reorden ── */
+  function solicitarStockMasivo() {
+    const estadosActivos = ['SOLICITADA', 'PLANIFICADA', 'PRODUCCIÓN'];
+    const productosConOrdenActiva = new Set(
+      ERP.notificaciones
+        .filter(n => !n.oculta && estadosActivos.includes(n.estado))
+        .map(n => n.codigoProducto)
+    );
+    const productosReorden = ERP.productos.filter(p =>
+      p.stock <= p.rop && !productosConOrdenActiva.has(p.codigo)
+    );
+
+    if (productosReorden.length === 0) {
+      const totalReorden = ERP.productos.filter(p => p.stock <= p.rop).length;
+      mostrarToast(
+        totalReorden > 0
+          ? 'Todos los productos en reorden ya tienen órdenes activas'
+          : 'Todos los productos tienen stock suficiente',
+        'info'
+      );
+      return;
+    }
+
+    // Construir lista de productos con el mismo formato que abrirModalSolicitarStock
+    const productosParaOrden = productosReorden.map(p => ({
+      codigo:      p.codigo,
+      descripcion: p.descripcion,
+      stock:       p.stock,
+      rop:         p.rop,
+      cantPedida:  0,
+      faltante:    Math.max(1, p.rop * 2 - p.stock)  // sugerir reposición al doble del ROP
+    }));
+
+    // Reutilizar el modal de solicitar-stock si existe (estamos en credito.html),
+    // si no, crear uno dinámico equivalente
+    if (typeof abrirModalSolicitarStock === 'function') {
+      abrirModalSolicitarStock(productosParaOrden);
+      return;
+    }
+
+    // Modal dinámico para páginas que no son credito.html
+    let overlay = document.getElementById('modal-orden-produccion-masiva');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'modal-orden-produccion-masiva';
+      overlay.className = 'modal-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    const itemsHTML = productosParaOrden.map((p, idx) => `
+      <div style="background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 16px; margin-bottom:10px">
+        <div style="font-weight:700; font-size:.875rem; color:var(--neutral-800); margin-bottom:8px">${p.codigo} — ${p.descripcion}</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
+          <div>Stock actual: <strong style="color:var(--neutral-700)">${p.stock}</strong></div>
+          <div>ROP: <strong style="color:var(--neutral-700)">${p.rop}</strong></div>
+          <div>Déficit: <strong style="color:var(--danger)">${p.rop - p.stock}</strong></div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:.78rem">Cantidad a producir <span style="color:var(--danger)">*</span> <span style="color:var(--neutral-400); font-weight:400">(mín. ${p.faltante})</span></label>
+          <input type="number" id="masivo-cant-${idx}" class="form-control" value="${p.faltante}" min="${p.faltante}"
+            oninput="if(parseInt(this.value)<${p.faltante}) this.value=${p.faltante}">
+        </div>
+      </div>
+    `).join('');
+
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:580px; width:95vw">
+        <div class="modal-header">
+          <div class="modal-icon" style="background:#fff7ed; font-size:20px">🏭</div>
+          <div>
+            <div class="modal-title">Orden de Producción</div>
+            <div class="modal-subtitle">${productosParaOrden.length} producto${productosParaOrden.length !== 1 ? 's' : ''} en punto de reorden</div>
+          </div>
+        </div>
+        <div class="modal-body" style="max-height:55vh; overflow-y:auto">
+          <p style="font-size:.85rem; color:var(--neutral-600); margin-bottom:14px">
+            Los siguientes productos están por debajo de su punto de reorden. Confirma las cantidades a producir:
+          </p>
+          ${itemsHTML}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-orden-produccion-masiva')">Cancelar</button>
+          <button class="btn btn-warning" onclick="enviarOrdenProduccionMasiva()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+            </svg>
+            Enviar Órdenes de Producción
+          </button>
+        </div>
+      </div>`;
+
+    overlay.dataset.count = productosParaOrden.length;
+    overlay._productos = productosParaOrden;
+    openModal('modal-orden-produccion-masiva');
+  }
+
+  function enviarOrdenProduccionMasiva() {
+    const overlay = document.getElementById('modal-orden-produccion-masiva');
+    if (!overlay || !overlay._productos) return;
+
+    const base = Date.now();
+    overlay._productos.forEach((p, idx) => {
+      const cantEl = document.getElementById(`masivo-cant-${idx}`);
+      const cant   = cantEl ? parseInt(cantEl.value) : p.faltante;
+      const ordenId = 'ORD-' + (base + idx) + '-' + idx;
+      const id = 'notif-' + (base + idx);
+      ERP.notificaciones.push({
+        id, estado: 'SOLICITADA',
+        producto: `${p.codigo} — ${p.descripcion}`,
+        codigoProducto: p.codigo,
+        cantidad: cant,
+        ordenId,
+        fecha: new Date().toLocaleDateString('es-MX'),
+        extra: {},
+        oculta: false,
+        cerrada: false
+      });
+    });
+
+    saveState();
+    actualizarBadgeNotif();
+    actualizarBadgeReorden();
+    closeModal('modal-orden-produccion-masiva');
+    const n = overlay._productos.length;
+    mostrarToast(`${n} orden${n !== 1 ? 'es' : ''} de producción enviada${n !== 1 ? 's' : ''}`, 'success');
+  }
+
   // Inyectar layout antes del contenido
   document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById('layout-wrapper');
     if (wrapper) wrapper.insertAdjacentHTML('afterbegin', SHARED_LAYOUT);
+
+    // Migrar notificaciones antiguas que no tengan codigoProducto
+    ERP.notificaciones.forEach(n => {
+      if (!n.codigoProducto && n.producto) {
+        n.codigoProducto = n.producto.split('—')[0].trim();
+      }
+    });
 
     // Actualizar badge de pedidos pendientes
     setTimeout(() => {
@@ -600,6 +846,8 @@
         badge.textContent = pendientes;
         badge.style.display = pendientes ? '' : 'none';
       }
+      // Actualizar badge de punto de reorden
+      actualizarBadgeReorden();
       // Actualizar badge de notificaciones al cargar la página
       actualizarBadgeNotif();
     }, 100);
