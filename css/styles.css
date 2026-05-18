@@ -544,7 +544,7 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
 .badge-warning   { background: #ffedd5; color: #c2410c; }
 
 /* Badges de estado de pedido */
-.badge-validacion-cliente   { background: #ede9fe; color: #6d28d9; }
+.badge-validacion-cliente   { background: #34ace3; color: #ffffff; }
 .badge-validacion-credito   { background: #dbeafe; color: #1d4ed8; }
 .badge-confirmar-pedido     { background: #d1fae5; color: #065f46; }
 .badge-recibido             { background: #92ffa4; color: #288830; }

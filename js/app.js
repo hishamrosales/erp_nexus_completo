@@ -51,7 +51,7 @@ const ERP = {
   pedidos: [
     {
       folio: 'PED-2024-001', cliente_id: 'CLI-001', fecha: '2024-01-15',
-      fecha_envio: '2024-01-22', estado: 'Recibido',
+      fecha_envio: '2024-01-22', estado: 'Empaquetado',
       productos: [
         { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz', cantidad: 5, precio: 850.00, total: 4250.00 },
         { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz', cantidad: 5, precio: 450.00, total: 2250.00 }
@@ -308,15 +308,24 @@ function llenarFormCliente(c) {
   set('cli-tel-envio', c.tel_entrega);
   set('cli-horario',   c.horario_entrega);
   set('cli-obs',       c.obs_envio);
+  set('cli-limite-credito', c.limite_credito);
 
   actualizarBadgeEstadoCliente(c.estado);
+
+  // Seleccionar estado en el selector si existe
+  const selEstado = document.getElementById('cli-estado-select');
+  if (selEstado) selEstado.value = c.estado || 'pendiente';
 }
 
 function limpiarFormCliente() {
   $$('#form-cliente input, #form-cliente select, #form-cliente textarea').forEach(el => { el.value = ''; });
   const idEl = document.getElementById('cli-id');
   if (idEl) idEl.value = genFolio('CLI', ERP.clientes, 'id');
+  const limiteEl = document.getElementById('cli-limite-credito');
+  if (limiteEl) limiteEl.value = '100000';
   actualizarBadgeEstadoCliente('pendiente');
+  const selEstado = document.getElementById('cli-estado-select');
+  if (selEstado) selEstado.value = 'pendiente';
 }
 
 function resetearFormCliente() {
@@ -328,8 +337,10 @@ function resetearFormCliente() {
 function actualizarBadgeEstadoCliente(estado) {
   const el = document.getElementById('cli-estado-badge');
   const el2 = document.getElementById('cli-estado');
+  const sel = document.getElementById('cli-estado-select');
   if (el) el.innerHTML = badgeHTML(estado);
   if (el2) el2.value = estado;
+  if (sel) sel.value = estado;
 }
 
 function actualizarTituloFormCliente(txt) {
@@ -358,6 +369,11 @@ function guardarCliente() {
     return;
   }
 
+  // Sincronizar el campo oculto desde el selector de estado
+  const selEstado = document.getElementById('cli-estado-select');
+  const hiddenEstado = document.getElementById('cli-estado');
+  if (selEstado && hiddenEstado) hiddenEstado.value = selEstado.value;
+
   const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
   const datos = {
@@ -371,7 +387,7 @@ function guardarCliente() {
     estado_dir:       g('cli-estado-dir'),
     cp:               g('cli-cp'),
     pais:             g('cli-pais'),
-    estado:           ERP.clienteActivo ? ERP.clienteActivo.estado : 'pendiente',
+    estado:           g('cli-estado') || (ERP.clienteActivo ? ERP.clienteActivo.estado : 'pendiente'),
     metodo_pago:      g('cli-metodo'),
     banco:            g('cli-banco'),
     cuenta:           g('cli-cuenta'),
@@ -383,7 +399,7 @@ function guardarCliente() {
     tel_entrega:      g('cli-tel-envio'),
     horario_entrega:  g('cli-horario'),
     obs_envio:        g('cli-obs'),
-    limite_credito:   ERP.clienteActivo?.limite_credito || 100000,
+    limite_credito:   parseFloat(g('cli-limite-credito')) || ERP.clienteActivo?.limite_credito || 100000,
     credito_utilizado:ERP.clienteActivo?.credito_utilizado || 0
   };
 
@@ -503,6 +519,13 @@ function nuevoPedido() {
 function editarPedido(folio) {
   const p = ERP.pedidos.find(x => x.folio === folio);
   if (!p) return;
+
+  // Bloquear edición si ya está facturado
+  if (p.estado === 'Facturado') {
+    mostrarToast('No se puede editar un pedido ya facturado', 'warning');
+    return;
+  }
+
   ERP.pedidoActivo = p;
   ERP.modoEdicion = true;
 
@@ -866,17 +889,24 @@ function empaquetar() {
 
   const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
   if (idx >= 0) {
-    ERP.pedidos[idx].estado = 'Recibido';
+    // Restar cantidades del stock al empaquetar
+    ERP.pedidos[idx].productos.forEach(linea => {
+      const prod = ERP.productos.find(p => p.codigo === linea.codigo);
+      if (prod) {
+        prod.stock = Math.max(0, prod.stock - linea.cantidad);
+      }
+    });
+    ERP.pedidos[idx].estado = 'Empaquetado';
     ERP.pedidoActivo = ERP.pedidos[idx];
   }
 
   saveState();
 
   const badge = document.getElementById('cred-estado-badge');
-  if (badge) badge.innerHTML = badgeHTML('Recibido');
+  if (badge) badge.innerHTML = badgeHTML('Empaquetado');
 
   renderTablaPedidos();
-  mostrarToast('Pedido empaquetado y marcado como Recibido', 'success');
+  mostrarToast('Pedido empaquetado — Stock actualizado', 'success');
   openModal('modal-pedido-listo');
 }
 
@@ -905,13 +935,13 @@ function renderTablaFacturas() {
   });
 }
 
-/** Carga pedidos con estado "Recibido" en el selector de nueva factura */
+/** Carga pedidos con estado "Empaquetado" en el selector de nueva factura */
 function cargarPedidosParaFactura() {
   const sel = document.getElementById('fac-pedido');
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Seleccionar pedido --</option>';
   ERP.pedidos
-    .filter(p => p.estado === 'Recibido')
+    .filter(p => p.estado === 'Empaquetado')
     .forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.folio;
@@ -982,8 +1012,12 @@ function confirmarGuardarFactura() {
   closeModal('modal-confirmar-factura');
 
   const fa = ERP.facturaActiva;
+  if (!fa) return;
+
+  const nuevoFolio = document.getElementById('fac-folio')?.value || genFolio('FAC', ERP.facturas, 'folio');
+
   const factura = {
-    folio:       document.getElementById('fac-folio')?.value || genFolio('FAC', ERP.facturas, 'folio'),
+    folio:       nuevoFolio,
     folio_pedido:fa.folio_pedido,
     cliente_id:  fa.cliente_id,
     fecha:       today(),
@@ -994,16 +1028,17 @@ function confirmarGuardarFactura() {
     total:       fa.total
   };
 
-  ERP.facturaActiva = {
-    pedido, cliente, subtotal, iva, total,
-    folio:       nuevoFolio,
-    folio_pedido:pedido.folio,
-    cliente_id:  pedido.cliente_id
-  };
+  ERP.facturas.push(factura);
 
-  // Actualizar estado del pedido
+  // Actualizar estado del pedido a Facturado
   const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
   if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
+
+  // Actualizar crédito utilizado del cliente (sumar el total de la factura)
+  const idxC = ERP.clientes.findIndex(c => c.id === fa.cliente_id);
+  if (idxC >= 0) {
+    ERP.clientes[idxC].credito_utilizado = (ERP.clientes[idxC].credito_utilizado || 0) + fa.total;
+  }
 
   saveState();
   renderTablaFacturas();
