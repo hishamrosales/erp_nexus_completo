@@ -214,7 +214,7 @@
             </svg>
             Cancelar
           </button>
-          <button class="btn btn-primary" onclick="guardarPedido()">
+          <button id="btn-guardar-pedido" class="btn btn-primary" onclick="guardarPedido()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
@@ -275,11 +275,11 @@
       <div class="modal-icon modal-icon-success">📦</div>
       <div>
         <div class="modal-title">¡Pedido empaquetado!</div>
-        <div class="modal-subtitle">Estado actualizado a Recibido</div>
+        <div class="modal-subtitle">Estado actualizado a Empaquetado</div>
       </div>
     </div>
     <div class="modal-body">
-      El pedido ha sido marcado como <strong>Recibido</strong>. Ahora puede proceder a la <strong>facturación</strong>.
+      El pedido ha sido marcado como <strong>Empaquetado</strong> y el stock ha sido descontado. Ahora puede proceder a la <strong>facturación</strong>.
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-pedido-listo')">Cerrar</button>
@@ -370,7 +370,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-ver-pedido')">Cerrar</button>
-      <button class="btn btn-primary" onclick="irAEditarDesdVer()">
+      <button class="btn btn-primary" id="btn-editar-desde-ver" onclick="irAEditarDesdVer()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Editar pedido
       </button>
@@ -401,6 +401,13 @@
   window.editarPedido = function(folio) {
     const p = ERP.pedidos.find(x => x.folio === folio);
     if (!p) return;
+
+    // Bloquear edición si ya está facturado
+    if (p.estado === 'Facturado') {
+      mostrarToast('No se puede editar un pedido ya facturado', 'warning');
+      return;
+    }
+
     ERP.pedidoActivo = p;
     ERP.modoEdicion = true;
     document.getElementById('pedidos-container').style.display = 'none';
@@ -477,6 +484,16 @@
     document.getElementById('ver-ped-fecha').textContent      = fmtDate(p.fecha);
     document.getElementById('ver-ped-fecha-envio').textContent = fmtDate(p.fecha_envio);
     document.getElementById('ver-ped-total').textContent   = fmt(total);
+
+    // Ocultar botón Editar si ya está facturado
+    const btnEditar = document.getElementById('btn-editar-desde-ver');
+    if (btnEditar) {
+      if (p.estado === 'Facturado') {
+        btnEditar.style.display = 'none';
+      } else {
+        btnEditar.style.display = '';
+      }
+    }
 
     const tbody = document.getElementById('ver-ped-productos');
     tbody.innerHTML = '';

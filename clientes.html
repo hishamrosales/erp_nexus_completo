@@ -144,10 +144,16 @@
                   </div>
                   Información General
                 </div>
-                <!-- Badge de estado del cliente (sólo lectura) -->
-                <div style="display:flex; align-items:center; gap:10px">
+                <!-- Badge de estado del cliente + selector -->
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
                   <span class="text-muted text-sm">Estado del cliente:</span>
                   <span id="cli-estado-badge"><span class="badge badge-pendiente">Pendiente</span></span>
+                  <select id="cli-estado-select" class="form-select" style="width:auto; min-width:130px; font-size:.82rem"
+                    onchange="actualizarBadgeEstadoCliente(this.value)">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="activo">Activo</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
                 </div>
               </div>
               <div class="erp-card-body">
@@ -168,7 +174,17 @@
                     <div class="form-group">
                       <label>RFC <span class="required">*</span></label>
                       <input type="text" id="cli-rfc" class="form-control" required placeholder="Ej. DTS890312AB1" maxlength="13" style="text-transform:uppercase">
-                      <div class="invalid-feedback">RFC inválido</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-section">
+                  <div class="form-section-title">Crédito</div>
+                  <div class="form-grid form-grid-4">
+                    <div class="form-group col-span-2">
+                      <label>Límite de Crédito (MXN)</label>
+                      <input type="number" id="cli-limite-credito" class="form-control" placeholder="Ej. 100000" min="0" step="1000" value="100000">
+                      <div class="invalid-feedback">Ingresa un monto válido</div>
                     </div>
                   </div>
                 </div>
@@ -216,15 +232,6 @@
                       <input type="text" id="cli-cp" class="form-control" placeholder="03810" maxlength="5">
                     </div>
                   </div>
-                </div>
-
-                <!-- Campo estado del cliente readonly con nota informativa -->
-                <div class="alert alert-info">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  El <strong>Estado del cliente</strong> es asignado automáticamente por el sistema y no puede modificarse manualmente.
-                  Los estados posibles son: <strong>Activo</strong>, <strong>Pendiente</strong> y <strong>Bloqueado</strong>.
                 </div>
 
               </div>

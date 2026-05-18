@@ -51,7 +51,7 @@ const ERP = {
   pedidos: [
     {
       folio: 'PED-2024-001', cliente_id: 'CLI-001', fecha: '2024-01-15',
-      fecha_envio: '2024-01-22', estado: 'Recibido',
+      fecha_envio: '2024-01-22', estado: 'Empaquetado',
       productos: [
         { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz', cantidad: 5, precio: 850.00, total: 4250.00 },
         { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz', cantidad: 5, precio: 450.00, total: 2250.00 }
@@ -98,9 +98,11 @@ const ERP = {
 function saveState() {
   try {
     localStorage.setItem('erp_nexus_data', JSON.stringify({
-      clientes: ERP.clientes,
-      pedidos:  ERP.pedidos,
-      facturas: ERP.facturas
+      clientes:       ERP.clientes,
+      pedidos:        ERP.pedidos,
+      facturas:       ERP.facturas,
+      productos:      ERP.productos,
+      notificaciones: ERP.notificaciones
     }));
   } catch(e) {}
 }
@@ -110,9 +112,11 @@ function loadState() {
     const d = localStorage.getItem('erp_nexus_data');
     if (d) {
       const parsed = JSON.parse(d);
-      if (parsed.clientes) ERP.clientes = parsed.clientes;
-      if (parsed.pedidos)  ERP.pedidos  = parsed.pedidos;
-      if (parsed.facturas) ERP.facturas  = parsed.facturas;
+      if (parsed.clientes)       ERP.clientes       = parsed.clientes;
+      if (parsed.pedidos)        ERP.pedidos        = parsed.pedidos;
+      if (parsed.facturas)       ERP.facturas       = parsed.facturas;
+      if (parsed.productos)      ERP.productos      = parsed.productos;
+      if (parsed.notificaciones) ERP.notificaciones = parsed.notificaciones;
     }
   } catch(e) {}
 }
@@ -308,15 +312,24 @@ function llenarFormCliente(c) {
   set('cli-tel-envio', c.tel_entrega);
   set('cli-horario',   c.horario_entrega);
   set('cli-obs',       c.obs_envio);
+  set('cli-limite-credito', c.limite_credito);
 
   actualizarBadgeEstadoCliente(c.estado);
+
+  // Seleccionar estado en el selector si existe
+  const selEstado = document.getElementById('cli-estado-select');
+  if (selEstado) selEstado.value = c.estado || 'pendiente';
 }
 
 function limpiarFormCliente() {
   $$('#form-cliente input, #form-cliente select, #form-cliente textarea').forEach(el => { el.value = ''; });
   const idEl = document.getElementById('cli-id');
   if (idEl) idEl.value = genFolio('CLI', ERP.clientes, 'id');
+  const limiteEl = document.getElementById('cli-limite-credito');
+  if (limiteEl) limiteEl.value = '100000';
   actualizarBadgeEstadoCliente('pendiente');
+  const selEstado = document.getElementById('cli-estado-select');
+  if (selEstado) selEstado.value = 'pendiente';
 }
 
 function resetearFormCliente() {
@@ -328,8 +341,10 @@ function resetearFormCliente() {
 function actualizarBadgeEstadoCliente(estado) {
   const el = document.getElementById('cli-estado-badge');
   const el2 = document.getElementById('cli-estado');
+  const sel = document.getElementById('cli-estado-select');
   if (el) el.innerHTML = badgeHTML(estado);
   if (el2) el2.value = estado;
+  if (sel) sel.value = estado;
 }
 
 function actualizarTituloFormCliente(txt) {
@@ -358,6 +373,11 @@ function guardarCliente() {
     return;
   }
 
+  // Sincronizar el campo oculto desde el selector de estado
+  const selEstado = document.getElementById('cli-estado-select');
+  const hiddenEstado = document.getElementById('cli-estado');
+  if (selEstado && hiddenEstado) hiddenEstado.value = selEstado.value;
+
   const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
   const datos = {
@@ -371,7 +391,7 @@ function guardarCliente() {
     estado_dir:       g('cli-estado-dir'),
     cp:               g('cli-cp'),
     pais:             g('cli-pais'),
-    estado:           ERP.clienteActivo ? ERP.clienteActivo.estado : 'pendiente',
+    estado:           g('cli-estado') || (ERP.clienteActivo ? ERP.clienteActivo.estado : 'pendiente'),
     metodo_pago:      g('cli-metodo'),
     banco:            g('cli-banco'),
     cuenta:           g('cli-cuenta'),
@@ -383,7 +403,7 @@ function guardarCliente() {
     tel_entrega:      g('cli-tel-envio'),
     horario_entrega:  g('cli-horario'),
     obs_envio:        g('cli-obs'),
-    limite_credito:   ERP.clienteActivo?.limite_credito || 100000,
+    limite_credito:   parseFloat(g('cli-limite-credito')) || ERP.clienteActivo?.limite_credito || 100000,
     credito_utilizado:ERP.clienteActivo?.credito_utilizado || 0
   };
 
@@ -418,6 +438,7 @@ function renderTablaPedidos() {
   ERP.pedidos.forEach(p => {
     const cli = ERP.clientes.find(c => c.id === p.cliente_id);
     const total = p.productos.reduce((s, x) => s + x.total, 0);
+    const esFacturado = p.estado === 'Facturado';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
@@ -429,7 +450,13 @@ function renderTablaPedidos() {
       <td>
         <div class="d-flex gap-2">
           <button class="btn btn-secondary btn-sm" onclick="abrirModalVerPedido('${p.folio}')">Ver</button>
-          <button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>
+          ${esFacturado
+            ? `<button class="btn btn-sm" disabled title="Pedido facturado — no editable" style="background:#e5e7eb; color:#9ca3af; cursor:not-allowed">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                 Facturado
+               </button>`
+            : `<button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>`
+          }
           <button class="btn btn-danger btn-sm" onclick="confirmarEliminarPedido('${p.folio}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
@@ -503,6 +530,13 @@ function nuevoPedido() {
 function editarPedido(folio) {
   const p = ERP.pedidos.find(x => x.folio === folio);
   if (!p) return;
+
+  // Bloquear edición si ya está facturado
+  if (p.estado === 'Facturado') {
+    mostrarToast('No se puede editar un pedido ya facturado', 'warning');
+    return;
+  }
+
   ERP.pedidoActivo = p;
   ERP.modoEdicion = true;
 
@@ -541,13 +575,32 @@ function actualizarUISegunEstadoPedido(estado) {
   const btnStock      = document.getElementById('btn-consultar-stock');
   const btnConfirmar  = document.getElementById('btn-confirmar-pedido');
   const btnEmpaquetar = document.getElementById('btn-empaquetar');
+  const btnGuardar    = document.getElementById('btn-guardar-pedido');
 
   const ESTADOS = ['Validación cliente','Validación crédito','Confirmar pedido','Recibido','Empaquetado'];
 
   if (btnCredito)    btnCredito.disabled   = !ESTADOS.includes(estado) || estado === 'Nuevo';
   if (btnStock)      btnStock.disabled     = !['Validación crédito','Confirmar pedido','Recibido','Empaquetado'].includes(estado);
   if (btnConfirmar)  btnConfirmar.disabled = !['Validación crédito'].includes(estado);
+  // Empaquetar: disponible desde Recibido (antes llamado así) o Confirmar pedido
   if (btnEmpaquetar) btnEmpaquetar.disabled= !['Confirmar pedido','Recibido','Empaquetado'].includes(estado);
+
+  // Si ya está facturado, bloquear toda edición del formulario
+  if (estado === 'Facturado') {
+    ['pedido-form-container', 'form-pedido'].forEach(formId => {
+      const formEl = document.getElementById(formId);
+      if (formEl) {
+        formEl.querySelectorAll('input, select, textarea').forEach(el => {
+          el.disabled = true;
+        });
+      }
+    });
+    if (btnGuardar)    btnGuardar.style.display    = 'none';
+    if (btnEmpaquetar) btnEmpaquetar.style.display  = 'none';
+    if (btnConfirmar)  btnConfirmar.style.display   = 'none';
+    if (btnCredito)    btnCredito.style.display     = 'none';
+    if (btnStock)      btnStock.style.display       = 'none';
+  }
 }
 
 function actualizarBotonesCredito(creditoAprobado) {
@@ -866,17 +919,31 @@ function empaquetar() {
 
   const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
   if (idx >= 0) {
-    ERP.pedidos[idx].estado = 'Recibido';
+    const pedido = ERP.pedidos[idx];
+    // Solo restar stock si aún no está empaquetado (evitar doble descuento)
+    if (pedido.estado !== 'Empaquetado') {
+      pedido.productos.forEach(linea => {
+        const prod = ERP.productos.find(p => p.codigo === linea.codigo);
+        if (prod) {
+          prod.stock = Math.max(0, prod.stock - linea.cantidad);
+        }
+      });
+    }
+    ERP.pedidos[idx].estado = 'Empaquetado';
     ERP.pedidoActivo = ERP.pedidos[idx];
   }
 
   saveState();
 
   const badge = document.getElementById('cred-estado-badge');
-  if (badge) badge.innerHTML = badgeHTML('Recibido');
+  if (badge) badge.innerHTML = badgeHTML('Empaquetado');
+
+  // Actualizar badge en el formulario de pedido si existe
+  const pedBadge = document.getElementById('ped-estado-badge');
+  if (pedBadge) pedBadge.innerHTML = badgeHTML('Empaquetado');
 
   renderTablaPedidos();
-  mostrarToast('Pedido empaquetado y marcado como Recibido', 'success');
+  mostrarToast('Pedido empaquetado — Stock actualizado', 'success');
   openModal('modal-pedido-listo');
 }
 
@@ -905,13 +972,13 @@ function renderTablaFacturas() {
   });
 }
 
-/** Carga pedidos con estado "Recibido" en el selector de nueva factura */
+/** Carga pedidos con estado "Empaquetado" o "Recibido" en el selector de nueva factura */
 function cargarPedidosParaFactura() {
   const sel = document.getElementById('fac-pedido');
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Seleccionar pedido --</option>';
   ERP.pedidos
-    .filter(p => p.estado === 'Recibido')
+    .filter(p => p.estado === 'Empaquetado' || p.estado === 'Recibido')
     .forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.folio;
@@ -982,8 +1049,12 @@ function confirmarGuardarFactura() {
   closeModal('modal-confirmar-factura');
 
   const fa = ERP.facturaActiva;
+  if (!fa) return;
+
+  const nuevoFolio = document.getElementById('fac-folio')?.value || genFolio('FAC', ERP.facturas, 'folio');
+
   const factura = {
-    folio:       document.getElementById('fac-folio')?.value || genFolio('FAC', ERP.facturas, 'folio'),
+    folio:       nuevoFolio,
     folio_pedido:fa.folio_pedido,
     cliente_id:  fa.cliente_id,
     fecha:       today(),
@@ -994,16 +1065,17 @@ function confirmarGuardarFactura() {
     total:       fa.total
   };
 
-  ERP.facturaActiva = {
-    pedido, cliente, subtotal, iva, total,
-    folio:       nuevoFolio,
-    folio_pedido:pedido.folio,
-    cliente_id:  pedido.cliente_id
-  };
+  ERP.facturas.push(factura);
 
-  // Actualizar estado del pedido
+  // Actualizar estado del pedido a Facturado
   const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
   if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
+
+  // Actualizar crédito utilizado del cliente (restar el total de la factura, pago registrado)
+  const idxC = ERP.clientes.findIndex(c => c.id === fa.cliente_id);
+  if (idxC >= 0) {
+    ERP.clientes[idxC].credito_utilizado = Math.max(0, (ERP.clientes[idxC].credito_utilizado || 0) - fa.total);
+  }
 
   saveState();
   renderTablaFacturas();
