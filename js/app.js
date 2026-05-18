@@ -98,9 +98,11 @@ const ERP = {
 function saveState() {
   try {
     localStorage.setItem('erp_nexus_data', JSON.stringify({
-      clientes: ERP.clientes,
-      pedidos:  ERP.pedidos,
-      facturas: ERP.facturas
+      clientes:       ERP.clientes,
+      pedidos:        ERP.pedidos,
+      facturas:       ERP.facturas,
+      productos:      ERP.productos,
+      notificaciones: ERP.notificaciones
     }));
   } catch(e) {}
 }
@@ -110,9 +112,11 @@ function loadState() {
     const d = localStorage.getItem('erp_nexus_data');
     if (d) {
       const parsed = JSON.parse(d);
-      if (parsed.clientes) ERP.clientes = parsed.clientes;
-      if (parsed.pedidos)  ERP.pedidos  = parsed.pedidos;
-      if (parsed.facturas) ERP.facturas  = parsed.facturas;
+      if (parsed.clientes)       ERP.clientes       = parsed.clientes;
+      if (parsed.pedidos)        ERP.pedidos        = parsed.pedidos;
+      if (parsed.facturas)       ERP.facturas       = parsed.facturas;
+      if (parsed.productos)      ERP.productos      = parsed.productos;
+      if (parsed.notificaciones) ERP.notificaciones = parsed.notificaciones;
     }
   } catch(e) {}
 }
@@ -434,6 +438,7 @@ function renderTablaPedidos() {
   ERP.pedidos.forEach(p => {
     const cli = ERP.clientes.find(c => c.id === p.cliente_id);
     const total = p.productos.reduce((s, x) => s + x.total, 0);
+    const esFacturado = p.estado === 'Facturado';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="fw-semibold" style="color:var(--primary-mid)">${p.folio}</span></td>
@@ -445,7 +450,13 @@ function renderTablaPedidos() {
       <td>
         <div class="d-flex gap-2">
           <button class="btn btn-secondary btn-sm" onclick="abrirModalVerPedido('${p.folio}')">Ver</button>
-          <button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>
+          ${esFacturado
+            ? `<button class="btn btn-sm" disabled title="Pedido facturado — no editable" style="background:#e5e7eb; color:#9ca3af; cursor:not-allowed">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                 Facturado
+               </button>`
+            : `<button class="btn btn-sm" onclick="editarPedido('${p.folio}')" style="background:#ffde5c; color:var(--neutral-700)">Editar</button>`
+          }
           <button class="btn btn-danger btn-sm" onclick="confirmarEliminarPedido('${p.folio}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
@@ -564,13 +575,32 @@ function actualizarUISegunEstadoPedido(estado) {
   const btnStock      = document.getElementById('btn-consultar-stock');
   const btnConfirmar  = document.getElementById('btn-confirmar-pedido');
   const btnEmpaquetar = document.getElementById('btn-empaquetar');
+  const btnGuardar    = document.getElementById('btn-guardar-pedido');
 
   const ESTADOS = ['Validación cliente','Validación crédito','Confirmar pedido','Recibido','Empaquetado'];
 
   if (btnCredito)    btnCredito.disabled   = !ESTADOS.includes(estado) || estado === 'Nuevo';
   if (btnStock)      btnStock.disabled     = !['Validación crédito','Confirmar pedido','Recibido','Empaquetado'].includes(estado);
   if (btnConfirmar)  btnConfirmar.disabled = !['Validación crédito'].includes(estado);
+  // Empaquetar: disponible desde Recibido (antes llamado así) o Confirmar pedido
   if (btnEmpaquetar) btnEmpaquetar.disabled= !['Confirmar pedido','Recibido','Empaquetado'].includes(estado);
+
+  // Si ya está facturado, bloquear toda edición del formulario
+  if (estado === 'Facturado') {
+    ['pedido-form-container', 'form-pedido'].forEach(formId => {
+      const formEl = document.getElementById(formId);
+      if (formEl) {
+        formEl.querySelectorAll('input, select, textarea').forEach(el => {
+          el.disabled = true;
+        });
+      }
+    });
+    if (btnGuardar)    btnGuardar.style.display    = 'none';
+    if (btnEmpaquetar) btnEmpaquetar.style.display  = 'none';
+    if (btnConfirmar)  btnConfirmar.style.display   = 'none';
+    if (btnCredito)    btnCredito.style.display     = 'none';
+    if (btnStock)      btnStock.style.display       = 'none';
+  }
 }
 
 function actualizarBotonesCredito(creditoAprobado) {
@@ -889,13 +919,16 @@ function empaquetar() {
 
   const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
   if (idx >= 0) {
-    // Restar cantidades del stock al empaquetar
-    ERP.pedidos[idx].productos.forEach(linea => {
-      const prod = ERP.productos.find(p => p.codigo === linea.codigo);
-      if (prod) {
-        prod.stock = Math.max(0, prod.stock - linea.cantidad);
-      }
-    });
+    const pedido = ERP.pedidos[idx];
+    // Solo restar stock si aún no está empaquetado (evitar doble descuento)
+    if (pedido.estado !== 'Empaquetado') {
+      pedido.productos.forEach(linea => {
+        const prod = ERP.productos.find(p => p.codigo === linea.codigo);
+        if (prod) {
+          prod.stock = Math.max(0, prod.stock - linea.cantidad);
+        }
+      });
+    }
     ERP.pedidos[idx].estado = 'Empaquetado';
     ERP.pedidoActivo = ERP.pedidos[idx];
   }
@@ -904,6 +937,10 @@ function empaquetar() {
 
   const badge = document.getElementById('cred-estado-badge');
   if (badge) badge.innerHTML = badgeHTML('Empaquetado');
+
+  // Actualizar badge en el formulario de pedido si existe
+  const pedBadge = document.getElementById('ped-estado-badge');
+  if (pedBadge) pedBadge.innerHTML = badgeHTML('Empaquetado');
 
   renderTablaPedidos();
   mostrarToast('Pedido empaquetado — Stock actualizado', 'success');
@@ -935,13 +972,13 @@ function renderTablaFacturas() {
   });
 }
 
-/** Carga pedidos con estado "Empaquetado" en el selector de nueva factura */
+/** Carga pedidos con estado "Empaquetado" o "Recibido" en el selector de nueva factura */
 function cargarPedidosParaFactura() {
   const sel = document.getElementById('fac-pedido');
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Seleccionar pedido --</option>';
   ERP.pedidos
-    .filter(p => p.estado === 'Empaquetado')
+    .filter(p => p.estado === 'Empaquetado' || p.estado === 'Recibido')
     .forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.folio;
@@ -1034,10 +1071,10 @@ function confirmarGuardarFactura() {
   const idxP = ERP.pedidos.findIndex(p => p.folio === fa.folio_pedido);
   if (idxP >= 0) ERP.pedidos[idxP].estado = 'Facturado';
 
-  // Actualizar crédito utilizado del cliente (sumar el total de la factura)
+  // Actualizar crédito utilizado del cliente (restar el total de la factura, pago registrado)
   const idxC = ERP.clientes.findIndex(c => c.id === fa.cliente_id);
   if (idxC >= 0) {
-    ERP.clientes[idxC].credito_utilizado = (ERP.clientes[idxC].credito_utilizado || 0) + fa.total;
+    ERP.clientes[idxC].credito_utilizado = Math.max(0, (ERP.clientes[idxC].credito_utilizado || 0) - fa.total);
   }
 
   saveState();

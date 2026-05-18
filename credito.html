@@ -398,11 +398,11 @@
       <div class="modal-icon modal-icon-success">📦</div>
       <div>
         <div class="modal-title">¡Pedido empaquetado!</div>
-        <div class="modal-subtitle">Estado actualizado a "Recibido"</div>
+        <div class="modal-subtitle">Estado actualizado a "Empaquetado"</div>
       </div>
     </div>
     <div class="modal-body">
-      El pedido ha sido marcado como <strong>Recibido</strong>. Ahora puede proceder a la <strong>facturación</strong>.
+      El pedido ha sido marcado como <strong>Empaquetado</strong> y el stock ha sido descontado. Ahora puede proceder a la <strong>facturación</strong>.
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-pedido-listo')">Cerrar</button>
@@ -812,20 +812,30 @@
     if (!ERP.pedidoActivo) return;
     const idx = ERP.pedidos.findIndex(p => p.folio === ERP.pedidoActivo.folio);
     if (idx >= 0) {
-      ERP.pedidos[idx].estado = 'Recibido';
+      const pedido = ERP.pedidos[idx];
+      // Solo restar stock si aún no está empaquetado (evitar doble descuento)
+      if (pedido.estado !== 'Empaquetado') {
+        pedido.productos.forEach(linea => {
+          const prod = ERP.productos.find(p => p.codigo === linea.codigo);
+          if (prod) {
+            prod.stock = Math.max(0, prod.stock - linea.cantidad);
+          }
+        });
+      }
+      ERP.pedidos[idx].estado = 'Empaquetado';
       ERP.pedidoActivo = ERP.pedidos[idx];
     }
     saveState();
 
     const badge = document.getElementById('cred-estado-badge');
-    if (badge) badge.innerHTML = badgeHTML('Recibido');
+    if (badge) badge.innerHTML = badgeHTML('Empaquetado');
 
     const btnConf = document.getElementById('btn-confirmar-pedido');
     if (btnConf) btnConf.disabled = true;
     const btnEmp = document.getElementById('btn-empaquetar-cred');
     if (btnEmp) btnEmp.disabled = true;
 
-    mostrarToast('Pedido empaquetado — Estado: Recibido', 'success');
+    mostrarToast('Pedido empaquetado — Stock actualizado', 'success');
     openModal('modal-pedido-listo');
   }
 

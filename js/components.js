@@ -600,6 +600,8 @@
         badge.textContent = pendientes;
         badge.style.display = pendientes ? '' : 'none';
       }
+      // Actualizar badge de notificaciones al cargar la página
+      actualizarBadgeNotif();
     }, 100);
 
     activarNavItem();
