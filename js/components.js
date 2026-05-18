@@ -193,13 +193,13 @@
 
   <div style="background:linear-gradient(135deg,#fff7ed,#fef3c7); border:1px solid #fcd34d; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#78350f">Ilde Rayón Cid</div>
+    <div style="font-weight:700; font-size:.9rem; color:#78350f">Ilde RC</div>
     <div style="font-size:.75rem; color:#92400e; margin-top:2px">Desarrolladora</div>
   </div>
 
   <div style="background:linear-gradient(135deg,#ede9fe,#f5f3ff); border:1px solid #c4b5fd; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#4c1d95">María José Espinosa Minjares</div>
+    <div style="font-weight:700; font-size:.9rem; color:#4c1d94">María José EM</div>
     <div style="font-size:.75rem; color:#6d28d9; margin-top:2px">Desarrolladora</div>
   </div>
 
