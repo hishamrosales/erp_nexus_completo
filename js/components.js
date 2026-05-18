@@ -166,39 +166,44 @@
 
   <div style="background:linear-gradient(135deg,#fce7f3,#fdf2f8); border:1px solid #f9a8d4; border-radius:12px; padding:16px; text-align:center; grid-column:1/-1">
     <div style="font-size:2rem; margin-bottom:6px">👩‍🏫</div>
-    <div style="font-weight:700; font-size:.9rem; color:#9d174d">Nombre Completo</div>
-    <div style="font-size:.75rem; color:#be185d; margin-top:2px">Tutora</div>
+    <div style="font-weight:700; font-size:.9rem; color:#9d174d">Dra. Patricia MZ</div>
+    <div style="font-size:.75rem; color:#be185d; margin-top:2px">ORCID: 0000-0001-6580-4243</div>
+    <div style="font-size:.75rem; color:#be185d; margin-top:2px">Asesora</div>
   </div>
 
   <div style="background:linear-gradient(135deg,#e0f2fe,#f0f9ff); border:1px solid #7dd3fc; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#075985">Nombre Completo</div>
+    <div style="font-weight:700; font-size:.9rem; color:#075985">Carolina RP</div>
     <div style="font-size:.75rem; color:#0369a1; margin-top:2px">Desarrolladora</div>
   </div>
 
   <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4); border:1px solid #86efac; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#14532d">Nombre Completo</div>
+    <div style="font-weight:700; font-size:.9rem; color:#14532d">Debanhi LA</div>
+    <div style="font-size:.75rem; color: #73c8a5bd; margin-top:2px">ORCID: 0009-0008-9571-8395</div>
     <div style="font-size:.75rem; color:#15803d; margin-top:2px">Desarrolladora</div>
+  </div>
+
+   <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1px solid #86efac; border-radius:12px; padding:16px; text-align:center">
+    <div style="font-size:2rem; margin-bottom:6px">👨‍💻</div>
+    <div style="font-weight:700; font-size:.9rem; color:#14532d">Hisham RM</div>
+    <div style="font-size:.75rem; color: #73c8a5bd; margin-top:2px">ORCID: 0009-0007-5475-363X</div>
+    <div style="font-size:.75rem; color:#15803d; margin-top:2px">Desarrollador</div>
   </div>
 
   <div style="background:linear-gradient(135deg,#fff7ed,#fef3c7); border:1px solid #fcd34d; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#78350f">Nombre Completo</div>
+    <div style="font-weight:700; font-size:.9rem; color:#78350f">Ilde Rayón Cid</div>
     <div style="font-size:.75rem; color:#92400e; margin-top:2px">Desarrolladora</div>
   </div>
 
   <div style="background:linear-gradient(135deg,#ede9fe,#f5f3ff); border:1px solid #c4b5fd; border-radius:12px; padding:16px; text-align:center">
     <div style="font-size:2rem; margin-bottom:6px">👩‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#4c1d95">Nombre Completo</div>
+    <div style="font-weight:700; font-size:.9rem; color:#4c1d95">María José Espinosa Minjares</div>
     <div style="font-size:.75rem; color:#6d28d9; margin-top:2px">Desarrolladora</div>
   </div>
 
-  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1px solid #86efac; border-radius:12px; padding:16px; text-align:center">
-    <div style="font-size:2rem; margin-bottom:6px">👨‍💻</div>
-    <div style="font-weight:700; font-size:.9rem; color:#14532d">Nombre Completo</div>
-    <div style="font-size:.75rem; color:#15803d; margin-top:2px">Desarrollador</div>
-  </div>
+ 
 
 </div>
 
