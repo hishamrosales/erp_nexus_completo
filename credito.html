@@ -250,7 +250,7 @@
           <div style="border:1px solid var(--neutral-200); border-radius:10px; padding:18px">
             <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:.9rem; color:var(--neutral-800); margin-bottom:14px; display:flex; align-items:center; gap:8px">
               <span style="background:var(--primary-mid); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800">2</span>
-              Validación de Deuda (máx. 20% del límite de crédito)
+              Validación de Deuda (máx. 35% del límite de crédito)
             </div>
             <div id="deuda-resultado" style="font-size:.875rem; color:var(--neutral-600)">
               Selecciona un pedido para calcular.
@@ -757,15 +757,39 @@
       const cli = ERP.clientes.find(c => c.id === ERP.pedidoActivo.cliente_id);
       if (!cli) return;
 
-      const pct = cli.limite_credito > 0 ? (cli.credito_utilizado / cli.limite_credito) * 100 : 0;
-      deudaValida = pct <= 20;
+      const totalPedido    = ERP.pedidoActivo.productos.reduce((s, p) => s + (p.total || 0), 0);
+      const estadosActivos = ['Validación cliente','Validación crédito','Confirmar pedido','Recibido','Empaquetado'];
+
+      const pedidosActivosCliente = ERP.pedidos.filter(p =>
+        estadosActivos.includes(p.estado) &&
+        p.cliente_id === cli.id &&
+        p.folio !== ERP.pedidoActivo.folio
+      );
+
+      const creditoYaComprometido = pedidosActivosCliente
+        .reduce((s, p) => s + p.productos.reduce((sp, pr) => sp + (pr.total || 0), 0), 0);
+
+      const creditoProyectado = creditoYaComprometido + totalPedido;
+      const pctActual     = cli.limite_credito > 0 ? (creditoYaComprometido / cli.limite_credito) * 100 : 0;
+      const pctProyectado = cli.limite_credito > 0 ? (creditoProyectado   / cli.limite_credito) * 100 : 0;
+
+      // Solo aplica la restricción del 35% si ya tiene pedidos activos sin liquidar
+      if (pedidosActivosCliente.length > 0) {
+        deudaValida = pctProyectado <= 35;
+      } else {
+        deudaValida = true;
+      }
 
       const el = document.getElementById('deuda-resultado');
       if (el) {
         if (deudaValida) {
-          el.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Deuda dentro del límite.</strong> Crédito utilizado: <strong>${pct.toFixed(1)}%</strong> del límite (máx. 20% permitido).</div>`;
+          if (pedidosActivosCliente.length > 0) {
+            el.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Deuda dentro del límite.</strong> Con este pedido se utilizaría el <strong>${pctProyectado.toFixed(1)}%</strong> del límite de crédito (actualmente ${pctActual.toFixed(1)}% — máx. 35% permitido).</div>`;
+          } else {
+            el.innerHTML = `<div class="alert alert-success" style="margin:0">✓ <strong>Sin deuda previa.</strong> El cliente no tiene pedidos activos sin liquidar. Sin restricción del 35%.</div>`;
+          }
         } else {
-          el.innerHTML = `<div class="alert alert-danger" style="margin:0">✕ <strong>Deuda excede el límite.</strong> Crédito utilizado: <strong>${pct.toFixed(1)}%</strong> del límite. Se requiere que sea menor al 20% para autorizar.</div>`;
+          el.innerHTML = `<div class="alert alert-danger" style="margin:0">✕ <strong>Deuda excede el límite.</strong> Con este pedido se estaría utilizando el <strong>${pctProyectado.toFixed(1)}%</strong> del límite de crédito (actualmente ${pctActual.toFixed(1)}%). El máximo permitido es del 35%.</div>`;
         }
       }
     }
@@ -1026,7 +1050,7 @@
         productosProblema.push({
           codigo: p.codigo, descripcion: p.descripcion,
           cantPedida: p.cantidad, stock: existencia, rop,
-          faltante: p.cantidad - existencia + rop
+          faltante: p.cantidad - existencia
         });
       } else if (enReorden) {
         estadoHTML = '<span class="badge badge-warning">⚠ En punto de Reorden</span>';

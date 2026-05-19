@@ -751,29 +751,28 @@ function guardarPedido() {
     return;
   }
 
-  // ── Validación: crédito — si el cliente tiene pedidos activos no liquidados,
-  //    el nuevo pedido no puede rebasar el 35% de su límite de crédito ──
+  // ── Validación: crédito — solo aplica el 35% si el cliente ya tiene pedidos activos sin liquidar ──
   const clienteObj = ERP.clientes.find(c => c.id === cliente);
   if (clienteObj && clienteObj.limite_credito) {
     const totalNuevoPedido = lineasValidas.reduce((s, p) => s + (p.total || 0), 0);
     const limiteCredito    = clienteObj.limite_credito;
 
-    // Estados que representan pedidos "activos" (no liquidados / no cancelados)
     const estadosActivos = ['Validación cliente','Validación crédito','Confirmar pedido','Recibido','Empaquetado'];
-
-    // Pedidos activos del cliente (excluyendo el pedido actual si se está editando)
     const pedidosActivosCliente = ERP.pedidos.filter(p =>
       estadosActivos.includes(p.estado) &&
       p.cliente_id === cliente &&
       p.folio !== folio
     );
 
-    // Solo aplicar la regla del 35% si el cliente ya tiene al menos un pedido activo sin liquidar
     if (pedidosActivosCliente.length > 0) {
-      const maxPermitido = limiteCredito * 0.35;
-      if (totalNuevoPedido > maxPermitido) {
+      const creditoYaComprometido = pedidosActivosCliente
+        .reduce((s, p) => s + p.productos.reduce((sp, pr) => sp + (pr.total || 0), 0), 0);
+      const maxPermitido    = limiteCredito * 0.35;
+      const totalComprometido = creditoYaComprometido + totalNuevoPedido;
+
+      if (totalComprometido > maxPermitido) {
         mostrarToast(
-          `El cliente tiene pedidos activos sin liquidar. Este nuevo pedido (${fmt(totalNuevoPedido)}) supera el 35% de su límite de crédito (${fmt(maxPermitido)}). Reduce el importe antes de continuar.`,
+          `El cliente tiene pedidos activos sin liquidar (${fmt(creditoYaComprometido)}). La suma con este nuevo pedido (${fmt(totalNuevoPedido)}) = ${fmt(totalComprometido)}, que supera el 35% de su límite de crédito (${fmt(maxPermitido)}). Reduce el importe antes de continuar.`,
           'danger'
         );
         return;
