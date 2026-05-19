@@ -42,3 +42,8 @@ Facturación rojo cereza  #9c1e3b  ESTO YA ESTÁ, PERO EL TONO DE AMARILLO NO ME
 Pedidos
 Validación cliente color azul #34ace3 fondo de ese color y letras blancas
 NO ME DIJERON LOS COLORES PARA LOS DEMÁS ESTADOS
+
+1200 * 0.78 = 936
+1200 pedidos promedio por mes
+.78 por el % de espacio utilizado en almacen
+936 lotes disponibles en stock

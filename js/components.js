@@ -75,17 +75,6 @@ const SHARED_LAYOUT = `
         </a>
       </li>
       <li>
-        <a href="#" onclick="solicitarStockMasivo(); return false;" id="nav-orden-produccion">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
-          Orden de Producción
-          <span class="sidebar-badge sidebar-badge-warning" id="badge-reorden" style="display:none">0</span>
-        </a>
-      </li>
-      <li>
         <a href="credito.html">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
@@ -104,6 +93,29 @@ const SHARED_LAYOUT = `
             <polyline points="10 9 9 9 8 9"/>
           </svg>
           Facturación
+        </a>
+      </li>
+      <li>
+        <a href="https://tilvalhallaproject.com/apps/track?srsltid=AfmBOooWLVivD2JG4ZnQOjJrKvH2jvq4xsZIm8S9zJg3i3pvUTpZ84jO">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="8" width="13" height="11" rx="1"/>
+            <path d="M14 10h4l3 3v5h-7V10z"/>
+            <circle cx="5.5" cy="19" r="1.5"/>
+            <circle cx="18.5" cy="19" r="1.5"/>
+            <line x1="1" y1="13" x2="14" y2="13"/>
+          </svg>
+          Tranportistas
+        </a>
+      </li>
+      <li>
+        <a href="#" onclick="solicitarStockMasivo(); return false;" id="nav-orden-produccion">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          Orden de Producción
+          <span class="sidebar-badge sidebar-badge-warning" id="badge-reorden" style="display:none">0</span>
         </a>
       </li>
     </ul>
@@ -595,7 +607,20 @@ const SHARED_LAYOUT = `
       const codigo = n.codigoProducto || (n.producto ? n.producto.split(' — ')[0].trim() : '');
       const prod = ERP.productos.find(p => p.codigo === codigo);
       if (prod) {
-        prod.stock = (prod.stock || 0) + (n.cantidad || 0);
+        const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+        const nuevoStockProd   = (prod.stock || 0) + (n.cantidad || 0);
+        const nuevoStockTotal  = stockTotalActual + (n.cantidad || 0);
+
+        if (nuevoStockProd > MAX_STOCK_PROD) {
+          mostrarToast(`⚠ No se puede agregar: ${prod.codigo} superaría el límite de ${MAX_STOCK_PROD} cajas por producto (tendría ${nuevoStockProd}).`, 'warning');
+          saveState(); actualizarBadgeReorden(); return;
+        }
+        if (nuevoStockTotal > MAX_STOCK_TOTAL) {
+          mostrarToast(`⚠ No se puede agregar: el inventario total superaría la capacidad de ${MAX_STOCK_TOTAL} cajas (quedaría en ${nuevoStockTotal}).`, 'warning');
+          saveState(); actualizarBadgeReorden(); return;
+        }
+
+        prod.stock = nuevoStockProd;
         saveState();
         actualizarBadgeReorden();
         mostrarToast(`✓ Stock de ${prod.codigo} actualizado (+${n.cantidad} uds)`, 'success');
@@ -695,8 +720,11 @@ const SHARED_LAYOUT = `
         .filter(n => !n.oculta && estadosActivos.includes(n.estado))
         .map(n => n.codigoProducto)
     );
+    // Solo contar productos que estén en ROP Y cuyo déficit sea >= MIN_ORDEN_PROD
     const sinOrden = ERP.productos.filter(p =>
-      p.stock <= p.rop && !productosConOrdenActiva.has(p.codigo)
+      p.stock <= p.rop &&
+      (p.rop - p.stock) >= MIN_ORDEN_PROD &&
+      !productosConOrdenActiva.has(p.codigo)
     ).length;
     badge.textContent = sinOrden;
     badge.style.display = sinOrden > 0 ? '' : 'none';
@@ -711,7 +739,9 @@ const SHARED_LAYOUT = `
         .map(n => n.codigoProducto)
     );
     const productosReorden = ERP.productos.filter(p =>
-      p.stock <= p.rop && !productosConOrdenActiva.has(p.codigo)
+      p.stock <= p.rop &&
+      (p.rop - p.stock) >= MIN_ORDEN_PROD &&
+      !productosConOrdenActiva.has(p.codigo)
     );
 
     if (productosReorden.length === 0) {

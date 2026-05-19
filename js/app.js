@@ -39,12 +39,12 @@ const ERP = {
 
   // ── Catálogo de productos ──
   productos: [
-  { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz',  precio: 850.00, stock: 125, rop: 25 },
-  { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz',         precio: 450.00, stock: 98,  rop: 18 },
-  { codigo: 'PROD-003', descripcion: '1 Caja de Rondanas Planas M6 Galvanizada, 1000pz',   precio: 300.00, stock: 152, rop: 16 },
-  { codigo: 'PROD-004', descripcion: '1 Caja de Pernos 1/2" x 2" Grado 5, 200pz',         precio: 640.00, stock: 45,  rop: 12 },
-  { codigo: 'PROD-005', descripcion: '1 Caja de Clavos 2.5" x 9, 15 Cajas de 1kg',        precio: 720.00, stock: 30,  rop: 10 },
-  { codigo: 'PROD-006', descripcion: '1 Caja de Remaches Pop 3/16" x 1/2", 800pz',        precio: 480.00, stock: 45,  rop: 9  },
+  { codigo: 'PROD-001', descripcion: '1 Caja de Tornillos M6x20 Hexagonal Zinc, 1000pz',  precio: 850.00, stock: 125, rop: 100 },
+  { codigo: 'PROD-002', descripcion: '1 Caja de Tuercas M6 DIN 934 Acero, 1000pz',         precio: 450.00, stock: 98,  rop: 100 },
+  { codigo: 'PROD-003', descripcion: '1 Caja de Rondanas Planas M6 Galvanizada, 1000pz',   precio: 300.00, stock: 152, rop: 100 },
+  { codigo: 'PROD-004', descripcion: '1 Caja de Pernos 1/2" x 2" Grado 5, 200pz',         precio: 640.00, stock: 45,  rop: 100 },
+  { codigo: 'PROD-005', descripcion: '1 Caja de Clavos 2.5" x 9, 15 Cajas de 1kg',        precio: 720.00, stock: 30,  rop: 100 },
+  { codigo: 'PROD-006', descripcion: '1 Caja de Remaches Pop 3/16" x 1/2", 800pz',        precio: 480.00, stock: 45,  rop: 100 },
 ],
 
   // ── Pedidos ──
@@ -874,6 +874,11 @@ function confirmarValidacionCredito() {
 
 /* MÓDULO: CONSULTA DE STOCK */
 
+/* ── Constantes de negocio ── */
+const MAX_STOCK_TOTAL   = 1200;  // cajas máximas en inventario total
+const MAX_STOCK_PROD    = 300;   // cajas máximas por producto
+const MIN_ORDEN_PROD    = 10;    // mínimo de cajas faltantes para lanzar orden de producción
+
 function consultarStock() {
   if (!ERP.pedidoActivo) return;
 
@@ -882,16 +887,26 @@ function consultarStock() {
 
   tbody.innerHTML = '';
 
+  // Calcular stock total actual (suma de todos los productos)
+  const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+
+  let todosuficiente = true;
+
   ERP.pedidoActivo.productos.forEach(p => {
     const prod = ERP.productos.find(x => x.codigo === p.codigo);
     const existencia = prod ? prod.stock : 0;
     const suficiente = existencia >= p.cantidad;
+    if (!suficiente) todosuficiente = false;
+
+    // Advertencia si el stock del producto supera el máximo permitido
+    const sobreCapacidad = existencia > MAX_STOCK_PROD;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${p.codigo}</td>
       <td>${p.descripcion}</td>
       <td>${p.cantidad.toLocaleString()}</td>
-      <td>${existencia.toLocaleString()}</td>
+      <td style="${sobreCapacidad ? 'color:var(--danger);font-weight:700' : ''}">${existencia.toLocaleString()}${sobreCapacidad ? ' ⚠' : ''}</td>
       <td>${suficiente
         ? '<span class="badge badge-activo">Sí</span>'
         : '<span class="badge badge-bloqueado">No</span>'}</td>
@@ -902,8 +917,35 @@ function consultarStock() {
   const seccion = document.getElementById('seccion-stock');
   if (seccion) { seccion.style.display = ''; seccion.classList.add('fade-in'); }
 
+  // Mostrar alerta de capacidad total si aplica
+  const alertaCapacidad = document.getElementById('alerta-capacidad-stock');
+  if (alertaCapacidad) {
+    if (stockTotalActual > MAX_STOCK_TOTAL) {
+      alertaCapacidad.style.display = '';
+      alertaCapacidad.innerHTML = `⚠️ <strong>Capacidad excedida:</strong> El inventario total es de ${stockTotalActual} cajas (máximo ${MAX_STOCK_TOTAL}).`;
+    } else {
+      alertaCapacidad.style.display = 'none';
+    }
+  }
+
+  // Verificar si hay productos que necesitan orden de producción (déficit ≥ MIN_ORDEN_PROD por producto)
+  const productosNecesitanOrden = ERP.pedidoActivo.productos.some(p => {
+    const prod = ERP.productos.find(x => x.codigo === p.codigo);
+    const existencia = prod ? prod.stock : 0;
+    const deficit = p.cantidad - existencia;
+    return deficit >= MIN_ORDEN_PROD;
+  });
+
+  // Habilitar "Confirmar Pedido" solo si no hay productos que requieran orden mínima de producción
   const btnConfirmar = document.getElementById('btn-confirmar-pedido');
-  if (btnConfirmar) btnConfirmar.disabled = false;
+  if (btnConfirmar) {
+    if (productosNecesitanOrden) {
+      btnConfirmar.disabled = true;
+      mostrarToast('Hay productos con déficit ≥ 10 cajas. Genera una orden de producción antes de confirmar.', 'warning');
+    } else {
+      btnConfirmar.disabled = false;
+    }
+  }
 }
 
 function confirmarPedido() {
@@ -935,6 +977,15 @@ function empaquetar() {
     const pedido = ERP.pedidos[idx];
     // Solo restar stock si aún no está empaquetado (evitar doble descuento)
     if (pedido.estado !== 'Empaquetado') {
+      // Validar que ningún producto supere 300 cajas después del descuento
+      // (el descuento reduce stock, así que este chequeo es preventivo para casos futuros)
+      // Validar que el stock total no supere 1200 cajas
+      const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+      if (stockTotalActual > MAX_STOCK_TOTAL) {
+        mostrarToast(`El inventario total (${stockTotalActual} cajas) supera la capacidad máxima de ${MAX_STOCK_TOTAL}. Genera órdenes de producción para regularizar.`, 'warning');
+        return;
+      }
+
       pedido.productos.forEach(linea => {
         const prod = ERP.productos.find(p => p.codigo === linea.codigo);
         if (prod) {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ERP Nexus — Pedidos</title>
+  <title>SAP & FURIOUS — Pedidos</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -399,7 +399,7 @@
     }
   }
 
-  // Parchamos guardarPedido para incluir la validación de fecha
+  // Parchamos guardarPedido para incluir la validación de fecha y cliente activo
   const _guardarPedidoOrig = window.guardarPedido || guardarPedido;
   window.guardarPedido = function() {
     const fechaEnvInput = document.getElementById('ped-fecha-envio');
@@ -407,6 +407,15 @@
       fechaEnvInput.classList.add('is-invalid');
       mostrarToast('La Fecha de Envío Estimada no puede ser anterior a hoy', 'warning');
       return;
+    }
+    // Validar que el cliente esté activo
+    const clienteId = document.getElementById('ped-cliente')?.value;
+    if (clienteId) {
+      const cli = ERP.clientes.find(c => c.id === clienteId);
+      if (cli && cli.estado !== 'activo') {
+        mostrarToast(`El cliente "${cli.nombre}" no está Activo (estado: ${cli.estado}). Solo se pueden crear pedidos para clientes activos.`, 'warning');
+        return;
+      }
     }
     _guardarPedidoOrig();
   };
@@ -467,7 +476,7 @@
     if (!sel) return;
     const val = sel.value;
     sel.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
-    ERP.clientes.forEach(c => {
+    ERP.clientes.filter(c => c.estado === 'activo').forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = `${c.id} — ${c.nombre}`;
