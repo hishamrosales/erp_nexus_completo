@@ -726,9 +726,59 @@ function guardarPedido() {
     return;
   }
 
-  if (productosLineas.length === 0 || !productosLineas.some(p => p.codigo)) {
+  const lineasValidas = productosLineas.filter(p => p.codigo);
+  if (lineasValidas.length === 0) {
     mostrarToast('Agrega al menos un producto', 'warning');
     return;
+  }
+
+  // ── Validación: máximo 250 cajas por producto ──
+  for (const linea of lineasValidas) {
+    if (linea.cantidad > MAX_STOCK_PROD) {
+      mostrarToast(`La cantidad de "${linea.codigo}" (${linea.cantidad}) supera el máximo permitido de ${MAX_STOCK_PROD} cajas por producto.`, 'danger');
+      return;
+    }
+  }
+
+  // ── Validación: capacidad total de inventario (1200 cajas) ──
+  // Suma stock actual + lo que se va a descontar al empaquetar
+  const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+  const cantidadTotalPedido = lineasValidas.reduce((s, p) => s + (p.cantidad || 0), 0);
+  // Si al descontar el pedido el stock quedaría negativo en algún producto, lo detectará
+  // el módulo de stock. Aquí solo verificamos que el stock actual no supere la capacidad.
+  if (stockTotalActual > MAX_STOCK_TOTAL) {
+    mostrarToast(`El inventario actual (${stockTotalActual} cajas) ya supera la capacidad máxima de ${MAX_STOCK_TOTAL}. Genera órdenes de producción para regularizar antes de continuar.`, 'danger');
+    return;
+  }
+
+  // ── Validación: crédito — si el cliente tiene pedidos activos no liquidados,
+  //    el nuevo pedido no puede rebasar el 35% de su límite de crédito ──
+  const clienteObj = ERP.clientes.find(c => c.id === cliente);
+  if (clienteObj && clienteObj.limite_credito) {
+    const totalNuevoPedido = lineasValidas.reduce((s, p) => s + (p.total || 0), 0);
+    const limiteCredito    = clienteObj.limite_credito;
+
+    // Estados que representan pedidos "activos" (no liquidados / no cancelados)
+    const estadosActivos = ['Validación cliente','Validación crédito','Confirmar pedido','Recibido','Empaquetado'];
+
+    // Pedidos activos del cliente (excluyendo el pedido actual si se está editando)
+    const pedidosActivosCliente = ERP.pedidos.filter(p =>
+      estadosActivos.includes(p.estado) &&
+      p.cliente_id === cliente &&
+      p.folio !== folio
+    );
+
+    // Solo aplicar la regla del 35% si el cliente ya tiene al menos un pedido activo sin liquidar
+    if (pedidosActivosCliente.length > 0) {
+      const maxPermitido = limiteCredito * 0.35;
+      if (totalNuevoPedido > maxPermitido) {
+        mostrarToast(
+          `El cliente tiene pedidos activos sin liquidar. Este nuevo pedido (${fmt(totalNuevoPedido)}) supera el 35% de su límite de crédito (${fmt(maxPermitido)}). Reduce el importe antes de continuar.`,
+          'danger'
+        );
+        return;
+      }
+    }
   }
 
   openModal('modal-confirmar-pedido');
@@ -876,7 +926,7 @@ function confirmarValidacionCredito() {
 
 /* ── Constantes de negocio ── */
 const MAX_STOCK_TOTAL   = 1200;  // cajas máximas en inventario total
-const MAX_STOCK_PROD    = 300;   // cajas máximas por producto
+const MAX_STOCK_PROD    = 250;   // cajas máximas por producto
 const MIN_ORDEN_PROD    = 10;    // mínimo de cajas faltantes para lanzar orden de producción
 
 function consultarStock() {

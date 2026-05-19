@@ -612,7 +612,7 @@ const SHARED_LAYOUT = `
         const nuevoStockTotal  = stockTotalActual + (n.cantidad || 0);
 
         if (nuevoStockProd > MAX_STOCK_PROD) {
-          mostrarToast(`⚠ No se puede agregar: ${prod.codigo} superaría el límite de ${MAX_STOCK_PROD} cajas por producto (tendría ${nuevoStockProd}).`, 'warning');
+          mostrarToast(`⚠ No se puede agregar: ${prod.codigo} superaría el límite de ${MAX_STOCK_PROD} cajas por producto (tendría ${nuevoStockProd}).`, 'danger');
           saveState(); actualizarBadgeReorden(); return;
         }
         if (nuevoStockTotal > MAX_STOCK_TOTAL) {
@@ -756,14 +756,19 @@ const SHARED_LAYOUT = `
     }
 
     // Construir lista de productos con el mismo formato que abrirModalSolicitarStock
-    const productosParaOrden = productosReorden.map(p => ({
-      codigo:      p.codigo,
-      descripcion: p.descripcion,
-      stock:       p.stock,
-      rop:         p.rop,
-      cantPedida:  0,
-      faltante:    Math.max(1, p.rop * 2 - p.stock)  // sugerir reposición al doble del ROP
-    }));
+    const productosParaOrden = productosReorden.map(p => {
+      const deficit   = Math.max(1, p.rop - p.stock);            // mínimo necesario para llegar al ROP
+      const maxCaben  = MAX_STOCK_PROD - p.stock;                // cajas que caben hasta 250
+      const sugerido  = Math.min(deficit, Math.max(1, maxCaben)); // no sugerir más de lo que cabe
+      return {
+        codigo:      p.codigo,
+        descripcion: p.descripcion,
+        stock:       p.stock,
+        rop:         p.rop,
+        cantPedida:  0,
+        faltante:    sugerido
+      };
+    });
 
     // Reutilizar el modal de solicitar-stock si existe (estamos en credito.html),
     // si no, crear uno dinámico equivalente
@@ -781,21 +786,36 @@ const SHARED_LAYOUT = `
       document.body.appendChild(overlay);
     }
 
-    const itemsHTML = productosParaOrden.map((p, idx) => `
+    const itemsHTML = productosParaOrden.map((p, idx) => {
+      const maxPorProd = MAX_STOCK_PROD - p.stock;  // cajas que caben hasta llegar a 250
+      const minCant    = Math.max(1, p.rop - p.stock); // mínimo = déficit respecto al ROP
+      const sugerido   = Math.min(p.faltante, maxPorProd);
+      return `
       <div style="background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 16px; margin-bottom:10px">
         <div style="font-weight:700; font-size:.875rem; color:var(--neutral-800); margin-bottom:8px">${p.codigo} — ${p.descripcion}</div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
           <div>Stock actual: <strong style="color:var(--neutral-700)">${p.stock}</strong></div>
-          <div>ROP: <strong style="color:var(--neutral-700)">${p.rop}</strong></div>
-          <div>Déficit: <strong style="color:var(--danger)">${p.rop - p.stock}</strong></div>
+          <div>Pto. reorden: <strong style="color:var(--warning)">${p.rop}</strong></div>
+          <div>Déficit: <strong style="color:var(--danger)">${Math.max(0, p.rop - p.stock)}</strong></div>
+          <div>Máx. permitido: <strong style="color:var(--neutral-700)">${maxPorProd}</strong></div>
         </div>
         <div class="form-group" style="margin:0">
-          <label style="font-size:.78rem">Cantidad a producir <span style="color:var(--danger)">*</span> <span style="color:var(--neutral-400); font-weight:400">(mín. ${p.faltante})</span></label>
-          <input type="number" id="masivo-cant-${idx}" class="form-control" value="${p.faltante}" min="${p.faltante}"
-            oninput="if(parseInt(this.value)<${p.faltante}) this.value=${p.faltante}">
+          <label style="font-size:.78rem">
+            Cantidad a producir <span style="color:var(--danger)">*</span>
+            <span style="color:var(--neutral-400); font-weight:400">
+              (mín. ${minCant} — máx. ${maxPorProd})
+            </span>
+          </label>
+          <input type="number" id="masivo-cant-${idx}" class="form-control"
+            value="${sugerido}" min="${minCant}" max="${maxPorProd}"
+            oninput="
+              var v=parseInt(this.value)||0;
+              if(v<${minCant}){ this.value=${minCant}; }
+              if(v>${maxPorProd}){ this.value=${maxPorProd}; mostrarToast('La cantidad no puede superar el máximo de ${maxPorProd} cajas para este producto (límite 250 por producto).','warning'); }
+            ">
         </div>
       </div>
-    `).join('');
+    `}).join('');
 
     overlay.innerHTML = `
       <div class="modal-box" style="max-width:580px; width:95vw">
@@ -832,6 +852,44 @@ const SHARED_LAYOUT = `
     const overlay = document.getElementById('modal-orden-produccion-masiva');
     if (!overlay || !overlay._productos) return;
 
+    // ── Validar capacidades ANTES de crear ninguna orden ──
+    const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+    let cantidadTotalSolicitada = 0;
+    const errores = [];
+
+    overlay._productos.forEach((p, idx) => {
+      const cantEl = document.getElementById(`masivo-cant-${idx}`);
+      const cant   = cantEl ? parseInt(cantEl.value) : p.faltante;
+      const prod   = ERP.productos.find(x => x.codigo === p.codigo);
+      const stockActual = prod ? prod.stock : p.stock;
+      const minCant = Math.max(1, p.rop - stockActual);
+      const maxPorProd = MAX_STOCK_PROD - stockActual;
+
+      if (cant < minCant) {
+        errores.push(`${p.codigo}: la cantidad mínima es ${minCant} (déficit respecto al ROP).`);
+      }
+      if (cant > maxPorProd) {
+        errores.push(`${p.codigo}: la cantidad ${cant} haría que el stock supere el máximo de ${MAX_STOCK_PROD} cajas por producto.`);
+      }
+      cantidadTotalSolicitada += cant;
+    });
+
+    if (errores.length > 0) {
+      mostrarToast(errores[0], 'danger');
+      return;
+    }
+
+    // Verificar que el stock total proyectado no supere la capacidad del almacén (1200)
+    const stockTotalProyectado = stockTotalActual + cantidadTotalSolicitada;
+    if (stockTotalProyectado > MAX_STOCK_TOTAL) {
+      mostrarToast(
+        `La suma de stock actual (${stockTotalActual}) + cantidad solicitada (${cantidadTotalSolicitada}) = ${stockTotalProyectado} cajas, lo que supera la capacidad máxima del almacén de ${MAX_STOCK_TOTAL} cajas. Reduce las cantidades antes de enviar.`,
+        'danger'
+      );
+      return;
+    }
+
+    // ── Crear las órdenes ──
     const base = Date.now();
     overlay._productos.forEach((p, idx) => {
       const cantEl = document.getElementById(`masivo-cant-${idx}`);

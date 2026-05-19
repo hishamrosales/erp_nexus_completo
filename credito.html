@@ -845,19 +845,31 @@
 
     productos.forEach((p, idx) => {
       const minCantidad = p.faltante;
+      const maxPorProd  = MAX_STOCK_PROD - p.stock;  // cajas que caben hasta llegar a 250
+      const maxCant     = Math.max(1, maxPorProd);
+      const valorSug    = Math.min(minCantidad, maxCant);
       const div = document.createElement('div');
       div.style.cssText = 'background:var(--neutral-50); border:1px solid var(--neutral-200); border-radius:8px; padding:14px 16px';
       div.innerHTML = `
         <div style="font-weight:700; font-size:.875rem; color:var(--neutral-800); margin-bottom:8px">${p.codigo} — ${p.descripcion}</div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px; font-size:.78rem; color:var(--neutral-500)">
           <div>Stock actual: <strong style="color:var(--neutral-700)">${p.stock}</strong></div>
           <div>Solicitado: <strong style="color:var(--neutral-700)">${p.cantPedida}</strong></div>
-          <div>ROP: <strong style="color:var(--neutral-700)">${p.rop}</strong></div>
+          <div>Pto. reorden: <strong style="color:var(--warning)">${p.rop}</strong></div>
+          <div>Máx. permitido: <strong style="color:var(--neutral-700)">${maxCant}</strong></div>
         </div>
         <div class="form-group">
-          <label style="font-size:.78rem">Cantidad a producir <span style="color:var(--danger)">*</span> <span style="color:var(--neutral-400); font-weight:400">(mín. ${minCantidad})</span></label>
-          <input type="number" id="ord-cant-${idx}" class="form-control" value="${minCantidad}" min="${minCantidad}"
-            oninput="if(parseInt(this.value)<${minCantidad}) this.value=${minCantidad}">
+          <label style="font-size:.78rem">
+            Cantidad a producir <span style="color:var(--danger)">*</span>
+            <span style="color:var(--neutral-400); font-weight:400">(mín. ${minCantidad} — máx. ${maxCant})</span>
+          </label>
+          <input type="number" id="ord-cant-${idx}" class="form-control"
+            value="${valorSug}" min="${minCantidad}" max="${maxCant}"
+            oninput="
+              var v=parseInt(this.value)||0;
+              if(v<${minCantidad}){ this.value=${minCantidad}; }
+              if(v>${maxCant}){ this.value=${maxCant}; mostrarToast('La cantidad excede el máximo permitido de ${maxCant} cajas para este producto (límite 250 por producto).','warning'); }
+            ">
         </div>
       `;
       lista.appendChild(div);
@@ -867,6 +879,42 @@
   }
 
   function enviarOrdenProduccion() {
+    // ── Validar capacidades ANTES de crear ninguna orden ──
+    const stockTotalActual = ERP.productos.reduce((s, p) => s + (p.stock || 0), 0);
+    let cantidadTotalSolicitada = 0;
+    const errores = [];
+
+    productosParaOrden.forEach((p, idx) => {
+      const cantEl = document.getElementById(`ord-cant-${idx}`);
+      const cant   = cantEl ? parseInt(cantEl.value) : p.faltante;
+      const prod   = ERP.productos.find(x => x.codigo === p.codigo);
+      const stockActual = prod ? prod.stock : p.stock;
+      const minCant    = p.faltante;
+      const maxPorProd = MAX_STOCK_PROD - stockActual;
+
+      if (cant < minCant) {
+        errores.push(`${p.codigo}: la cantidad mínima es ${minCant}.`);
+      }
+      if (cant > maxPorProd) {
+        errores.push(`${p.codigo}: la cantidad ${cant} haría que el stock supere el máximo de ${MAX_STOCK_PROD} cajas por producto.`);
+      }
+      cantidadTotalSolicitada += cant;
+    });
+
+    if (errores.length > 0) {
+      mostrarToast(errores[0], 'danger');
+      return;
+    }
+
+    const stockTotalProyectado = stockTotalActual + cantidadTotalSolicitada;
+    if (stockTotalProyectado > MAX_STOCK_TOTAL) {
+      mostrarToast(
+        `Stock actual (${stockTotalActual}) + solicitado (${cantidadTotalSolicitada}) = ${stockTotalProyectado} cajas — supera la capacidad máxima del almacén de ${MAX_STOCK_TOTAL}. Reduce las cantidades.`,
+        'danger'
+      );
+      return;
+    }
+
     closeModal('modal-solicitar-stock');
 
     productosParaOrden.forEach((p, idx) => {
