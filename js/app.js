@@ -404,7 +404,14 @@ function guardarCliente() {
     horario_entrega:  g('cli-horario'),
     obs_envio:        g('cli-obs'),
     limite_credito:   parseFloat(g('cli-limite-credito')) || ERP.clienteActivo?.limite_credito || 100000,
-    credito_utilizado:ERP.clienteActivo?.credito_utilizado || 0
+    credito_utilizado: (() => {
+      // Leer siempre del array actual para no pisar cambios hechos por facturas u otros procesos
+      if (ERP.modoEdicion && ERP.clienteActivo) {
+        const actual = ERP.clientes.find(c => c.id === ERP.clienteActivo.id);
+        return actual ? actual.credito_utilizado : (ERP.clienteActivo.credito_utilizado || 0);
+      }
+      return 0;
+    })()
   };
 
   if (ERP.modoEdicion && ERP.clienteActivo) {
