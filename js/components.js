@@ -321,7 +321,10 @@ const SHARED_LAYOUT = `
   }
 
   function agregarNotificacion(estado, producto, cantidad, ordenId, extra) {
-    const id = 'notif-' + Date.now();
+    const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                  ? crypto.randomUUID().replace(/-/g,'').slice(0,12)
+                  : Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+    const id = 'notif-' + uid;
     // _codigo se pasa en extra desde enviarPlanificador/enviarOperario para preservar el código limpio
     const codigoProducto = (extra && extra._codigo)
       ? extra._codigo
@@ -894,8 +897,11 @@ const SHARED_LAYOUT = `
     overlay._productos.forEach((p, idx) => {
       const cantEl = document.getElementById(`masivo-cant-${idx}`);
       const cant   = cantEl ? parseInt(cantEl.value) : p.faltante;
-      const ordenId = 'ORD-' + (base + idx) + '-' + idx;
-      const id = 'notif-' + (base + idx);
+      const uid    = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                       ? crypto.randomUUID().replace(/-/g,'').slice(0,12)
+                       : (base + '-' + idx + '-' + Math.random().toString(36).slice(2,7));
+      const ordenId = 'ORD-' + uid + '-' + idx;
+      const id      = 'notif-' + uid + '-' + idx;
       ERP.notificaciones.push({
         id, estado: 'SOLICITADA',
         producto: `${p.codigo} — ${p.descripcion}`,
