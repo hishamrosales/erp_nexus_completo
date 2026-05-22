@@ -3,7 +3,7 @@ const SHARED_LAYOUT = `
   <nav class="erp-navbar">
     <div class="brand">
       <div class="brand-icon">
-        <img src="/img/appicon.png" alt="Logo sap " width="125" height="48">
+        <img src="img/appicon.png" alt="Logo sap " width="125" height="48">
       </div>
     </div>
 
