@@ -695,6 +695,9 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
   max-width: 500px;
   width: 100%;
   overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   animation: slideUpModal .25s cubic-bezier(.34,1.56,.64,1);
 }
 
@@ -742,6 +745,8 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 600; line-he
   font-size: .875rem;
   color: var(--neutral-700);
   line-height: 1.6;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-footer {

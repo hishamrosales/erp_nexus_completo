@@ -175,7 +175,7 @@ const SHARED_LAYOUT = `
 
   <!-- ══════════════ MODAL: ACERCA DE ══════════════ -->
   <div id="modal-acerca-de" class="modal-overlay" style="z-index:2000">
-    <div class="modal-box" style="max-width:560px; width:95vw">
+    <div class="modal-box" style="max-width:560px; width:95vw; display:flex; flex-direction:column; max-height:90vh">
       <div class="modal-header">
         <div class="modal-icon" style="background:#f0f9ff; font-size:20px">👥</div>
         <div>
@@ -183,11 +183,15 @@ const SHARED_LAYOUT = `
           <div class="modal-subtitle">Equipo de desarrollo</div>
         </div>
       </div>
-      <div class="modal-body">
-        <div style="text-align:center; margin-bottom:20px">
-          <div style="font-size:.85rem; color:var(--neutral-500); margin-bottom:4px">Versión</div>
+      <div class="modal-body" style="overflow-y:auto; flex:1">
+        <div style="text-align:center; margin-bottom:16px">
           <div style="font-size:1.4rem; font-weight:800; color:var(--primary-mid)">SAP And Furious</div>
           <div style="font-size:.8rem; color:var(--neutral-400); margin-top:4px">Sistema de Gestión Empresarial · SAP Signavio</div>
+          <div style="margin-top:12px; margin-bottom:4px">
+            <img src="img/fotoSAPFurious.jpeg" alt="Equipo SAP &amp; Furious"
+              style="width:100%; max-width:460px; height:180px; object-fit:cover; object-position:top; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.12); display:inline-block;">
+          </div>
+        </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px">
 
   <div style="background:linear-gradient(135deg,#fce7f3,#fdf2f8); border:1px solid #f9a8d4; border-radius:12px; padding:16px; text-align:center; grid-column:1/-1">
@@ -228,14 +232,12 @@ const SHARED_LAYOUT = `
     <div style="font-weight:700; font-size:.9rem; color:#4c1d94">María José EM</div>
     <div style="font-size:.75rem; color:#6d28d9; margin-top:2px">Desarrolladora</div>
   </div>
-
- 
-
+  
 </div>
 
         </div>
         <div style="text-align:center; margin-top:20px; font-size:.75rem; color:var(--neutral-400)">
-          © 2024 SAP And Furious · Todos los derechos reservados
+          © 2026 SAP & Furious · Todos los derechos reservados
         </div>
       </div>
       <div class="modal-footer">
